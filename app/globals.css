@@ -123,6 +123,40 @@ p {
   color: white;
 }
 
+.primary-link {
+  border: 0;
+}
+
+.account-nav {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.account-nav span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-nav button {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
+  background: transparent;
+  color: white;
+}
+
 .hero {
   min-height: 560px;
   padding: clamp(48px, 8vw, 96px) clamp(20px, 6vw, 92px);
@@ -547,6 +581,10 @@ select:focus {
   height: 15px;
 }
 
+.card-stats button.liked {
+  color: var(--accent);
+}
+
 .card-actions {
   display: flex;
   flex-wrap: wrap;
@@ -639,6 +677,35 @@ select:focus {
   color: var(--muted);
 }
 
+.auth-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff9e9;
+}
+
+.auth-hint p {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.auth-hint button,
+.auth-submit {
+  min-height: 40px;
+  padding: 0 15px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--ink);
+  color: white;
+  font-weight: 800;
+}
+
 footer {
   min-height: 84px;
   padding: 22px clamp(20px, 6vw, 92px);
@@ -680,6 +747,43 @@ footer span {
   background: white;
   border-radius: 8px;
   position: relative;
+}
+
+.auth-dialog {
+  width: min(440px, 100%);
+  position: relative;
+  padding: 34px;
+  border-radius: 8px;
+  background: white;
+}
+
+.auth-dialog h2 {
+  margin: 8px 0 24px;
+  font-size: 36px;
+}
+
+.auth-dialog form {
+  display: grid;
+  gap: 16px;
+}
+
+.auth-submit {
+  margin-top: 6px;
+}
+
+.auth-submit:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.auth-switch {
+  margin-top: 18px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent-dark);
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .content-modal > img {
@@ -790,6 +894,10 @@ footer span {
     margin-left: auto;
   }
 
+  .account-nav {
+    margin-left: auto;
+  }
+
   .hero {
     padding: 36px 18px 52px;
   }
@@ -833,5 +941,10 @@ footer span {
 
   .manage-row > span {
     grid-column: 2 / -1;
+  }
+
+  .auth-hint {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
