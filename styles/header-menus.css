@@ -1,0 +1,127 @@
+/* Behance-like explore controls */
+.site-header { position: sticky; z-index: 40; }
+.site-header nav { height: 58px; gap: 0; }
+.site-header nav > a, .nav-dropdown > button {
+  height: 58px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: #2a2a2a;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+}
+.site-header nav > a.nav-active { border-bottom-color: #191919; }
+.nav-divider { width: 1px; height: 16px; margin: 0 6px; background: #dcdcdc; align-self: center; }
+.nav-dropdown { height: 58px; position: relative; }
+.nav-dropdown > button { gap: 3px; }
+.nav-dropdown > button svg { width: 14px; }
+.nav-menu { position: absolute; top: 54px; left: 0; z-index: 50; width: 210px; padding: 9px 0; border: 1px solid #dedede; border-radius: 3px; background: #fff; box-shadow: 0 5px 14px rgba(0,0,0,.15); }
+.nav-menu a { display: block; padding: 9px 18px; color: #333; font-size: 12px; font-weight: 600; }
+.nav-menu a:hover { background: #f5f5f5; color: #111; }
+.share-menu::before, .header-menu-panel::before, .account-panel::before { content: ""; position: absolute; top: -6px; width: 12px; height: 12px; background: #fff; border-left: 1px solid #dedede; border-top: 1px solid #dedede; transform: rotate(45deg); }
+.share-menu::before { right: 30px; }
+.header-menu-panel::before { right: 10px; }
+.account-panel::before { right: 10px; }
+.header-actions { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.header-hover-menu { height: 58px; display: flex; align-items: center; position: relative; }
+.share-work { min-height: 29px; display: inline-flex; align-items: center; padding: 0 13px; border: 1px solid #e8e8e8; border-radius: 18px; background: transparent; color: #333; font: inherit; font-size: 12px; font-weight: 700; }
+.share-work:hover { background: #f5f5f5; }
+.header-icon { width: 27px; height: 28px; display: grid; place-items: center; padding: 0; border: 0; background: transparent; color: #222; }
+.header-icon svg { width: 16px; }
+
+.share-menu { top: 46px; left: auto; right: 0; width: 300px; padding: 8px; display: grid; gap: 6px; }
+.share-menu-item { display: flex; align-items: center; gap: 12px; padding: 11px; border-radius: 8px; background: #eef4ff; }
+.share-menu-item:hover { background: #e1ebff; }
+.share-menu-item .share-menu-icon { width: 36px; height: 36px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 8px; background: #fff; color: #1769ff; }
+.share-menu-item .share-menu-icon svg { width: 17px; }
+.share-menu-item strong { display: block; margin-bottom: 2px; color: #1769ff; font-size: 12px; font-weight: 800; }
+.share-menu-item small { display: block; color: #767676; font-size: 10px; font-weight: 600; }
+.share-menu-item > svg { flex: 0 0 auto; margin-left: auto; width: 14px; color: #9aa6b8; }
+
+.header-menu-panel { position: absolute; top: 46px; right: 0; z-index: 50; width: 300px; border: 1px solid #dedede; border-radius: 6px; background: #fff; box-shadow: 0 5px 14px rgba(0,0,0,.15); }
+.header-menu-head { padding: 13px 16px; border-bottom: 1px solid #eee; }
+.header-menu-head h3 { margin: 0; color: #222; font-size: 13px; font-weight: 800; }
+.header-menu-empty { display: flex; flex-direction: column; align-items: center; gap: 9px; padding: 36px 22px; color: #8a8a8a; text-align: center; }
+.header-menu-empty svg { width: 22px; height: 22px; color: #c2c2c2; }
+.header-menu-empty p { margin: 0; font-size: 11px; font-weight: 650; line-height: 1.5; }
+
+.account-avatar-btn { padding: 0; border: 0; background: transparent; }
+.account-avatar { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; background: linear-gradient(135deg, #00c3e8 0 50%, #0980aa 50%); color: #fff; font-size: 13px; font-weight: 800; }
+.account-avatar.large { width: 52px; height: 52px; font-size: 19px; }
+.account-panel { position: absolute; top: 46px; right: 0; z-index: 50; width: 240px; border: 1px solid #dedede; border-radius: 6px; background: #fff; box-shadow: 0 5px 14px rgba(0,0,0,.15); }
+.account-panel-head { display: flex; flex-direction: column; align-items: center; gap: 9px; padding: 20px 16px; text-align: center; }
+.account-panel-head strong { color: #222; font-size: 13px; font-weight: 800; }
+.account-panel-head span { color: #888; font-size: 11px; font-weight: 600; }
+.account-panel-link { display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 16px; border: 0; border-top: 1px solid #f0f0f0; background: transparent; color: #333; font-size: 12px; font-weight: 700; font-family: inherit; text-align: left; }
+.account-panel-link:hover { background: #f5f5f5; }
+.account-panel-link:last-child { border-radius: 0 0 6px 6px; }
+.account-panel-link.danger { color: #b3261e; }
+.account-panel-link svg { width: 15px; }
+
+.hero { display: none; }
+.explore-section { max-width: none; padding-top: 0; }
+.toolbar {
+  grid-template-columns: auto minmax(250px, 1fr) auto auto;
+  position: sticky;
+  top: 58px;
+  z-index: 25;
+  /* Full-bleed background while sticky: .explore-section's own side padding would
+     otherwise leave two inset gaps where whatever scrolls underneath (grid images,
+     a full-bleed banner) shows through around the toolbar's white bar. Cancel that
+     padding with matching negative margins, then add it back as the toolbar's own
+     padding so the grid content inside stays visually aligned. Kept in sync with
+     .explore-section's actual side padding (30px here, 16px under the 760px
+     breakpoint, where an existing rule already covers it). */
+  margin: 0 -30px 16px;
+  padding: 14px 30px;
+  border: 0;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fff;
+}
+.filter-trigger { height: 38px; display: inline-flex; align-items: center; gap: 7px; padding: 0 15px; border: 1px solid #e7e7e7; border-radius: 21px; background: #fff; color: #333; font-size: 12px; font-weight: 700; }
+.filter-trigger svg { width: 17px; color: #777; }
+.search-box { max-width: none; height: 38px; border: 1px solid #ebebeb; border-radius: 20px; background: #fafafa; }
+.content-kind { display: flex; align-items: center; padding: 3px; border: 1px solid #e9e9e9; border-radius: 18px; background: #fff; }
+.content-kind button, .content-kind a { height: 27px; display: inline-flex; align-items: center; padding: 0 11px; border: 0; border-radius: 14px; background: transparent; color: #777; font-size: 11px; font-weight: 700; }
+.content-kind button.active { background: #fff; color: #222; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.content-kind a:hover { background: #f2f2f2; }
+.content-kind button:disabled { opacity: .45; cursor: default; }
+.sort-dropdown { position: relative; }
+.sort-selector { width: auto; height: 38px; display: flex; align-items: center; gap: 6px; padding: 0 3px 0 11px; border: 0; background: transparent; color: #555; font-size: 12px; font-weight: 700; }
+.sort-selector svg { width: 16px; }
+.sort-selector svg:last-child { width: 14px; }
+.sort-menu { position: absolute; right: 0; top: 42px; z-index: 35; width: 188px; padding: 6px 0; border: 1px solid #dedede; border-radius: 4px; background: #fff; box-shadow: 0 5px 14px rgba(0,0,0,.15); }
+.sort-menu button { width: 100%; display: block; padding: 9px 13px; border: 0; background: transparent; color: #333; text-align: left; font-size: 12px; font-weight: 600; }
+.sort-menu button:hover, .sort-menu button.active { background: #f3f6ff; color: #165fdc; }
+.topic-rack { display: flex; gap: 7px; overflow-x: auto; padding-bottom: 15px; scrollbar-width: none; }
+.topic-rack::-webkit-scrollbar { display: none; }
+.topic-card { width: 135px; height: 37px; flex: 0 0 auto; overflow: hidden; display: grid; place-items: center; padding: 0 9px; border: 1px solid rgba(255,255,255,.36); border-radius: 4px; background-color: #242424; background-position: center; background-size: cover; color: #fff; font-size: 11px; font-weight: 800; text-shadow: 0 1px 2px rgba(0,0,0,.4); }
+.topic-card:first-child { width: 113px; background-color: #1769ff; }
+.topic-card.active { outline: 2px solid #1769ff; outline-offset: 1px; }
+.feed-heading { display: flex; align-items: center; justify-content: space-between; margin: 1px 0 19px; }
+.feed-heading h2 { margin: 0; color: #292929; font-size: 13px; font-weight: 700; }
+.feed-heading button { min-height: 30px; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border: 1px solid #ececec; border-radius: 16px; background: #fff; color: #555; font-size: 11px; font-weight: 700; }
+.feed-heading button svg { width: 14px; }
+.explore-section .section-title { display: none; }
+
+@media (max-width: 900px) {
+  .toolbar { grid-template-columns: auto minmax(180px, 1fr) auto; }
+  .content-kind { display: none; }
+}
+
+@media (max-width: 620px) {
+  .site-header { min-height: 52px; }
+  .site-header nav { display: none; }
+  .header-actions { gap: 5px; }
+  .share-work { display: none; }
+  .toolbar { grid-template-columns: auto minmax(0, 1fr) auto; gap: 7px; top: 52px; }
+  .filter-trigger { width: 38px; justify-content: center; padding: 0; font-size: 0; }
+  .sort-selector { width: 32px; padding: 0; justify-content: center; }
+  .sort-selector span, .sort-selector svg:last-child { display: none; }
+  .sort-menu { right: 0; }
+  .topic-card { width: 116px; }
+}

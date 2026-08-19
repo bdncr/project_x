@@ -6,9 +6,11 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Icon } from "../../../components/Icon";
 import { SiteHeader } from "../../../components/SiteHeader";
+import { AuthDialog, AuthMode } from "../../../components/AuthDialog";
+import { Toast } from "../../../components/Toast";
+import { PostJobForm } from "../../../components/jobs/PostJobForm";
 import { supabase } from "../../../lib/supabase";
 import { useAuth } from "../../../lib/AuthProvider";
-import { EmploymentType, WorkMode } from "../../../lib/job-samples";
 import { JobForm, emptyJobForm, addLocalJob, buildJobInsertPayload, buildLocalJob, randomCompanyColor } from "../../../lib/jobs-data";
 
 const PREFILL_KEY = "project-x-hire-prompt";
@@ -24,6 +26,15 @@ export default function CreateJobPage() {
   const [jobForm, setJobForm] = useState<JobForm>(emptyJobForm);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<AuthMode>("signin");
+  const [authName, setAuthName] = useState("");
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authBusy, setAuthBusy] = useState(false);
+  const [toast, setToast] = useState("");
+
+  const notify = (message: string) => { setToast(message); window.setTimeout(() => setToast(""), 3400); };
 
   useEffect(() => {
     const prompt = window.sessionStorage.getItem(PREFILL_KEY);
@@ -58,10 +69,25 @@ export default function CreateJobPage() {
     router.push("/jobs");
   }
 
+  async function submitAuth(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!supabase) return;
+    setAuthBusy(true);
+    const response = authMode === "signin"
+      ? await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword })
+      : await supabase.auth.signUp({ email: authEmail, password: authPassword, options: { data: { display_name: authName.trim() } } });
+    setAuthBusy(false);
+    if (response.error) { notify(response.error.message); return; }
+    if (authMode === "signup" && !response.data.session) { notify("Баталгаажуулах имэйлээ шалгаад нэвтэрнэ үү."); return; }
+    setAuthOpen(false);
+    setAuthPassword("");
+    notify(authMode === "signin" ? "Амжилттай нэвтэрлээ." : "Бүртгэл амжилттай үүслээ.");
+  }
+
   const needsAuth = !!supabase && authReady && !user;
 
   return <main className="jobs-page">
-    <SiteHeader activePage="jobs" onLogin={() => router.push("/jobs")} />
+    <SiteHeader activePage="jobs" onLogin={() => setAuthOpen(true)} />
     <div className="job-form-page">
       <div className="job-form-shell">
         <Link className="job-form-back" href="/jobs"><Icon name="arrow" />Ажлын жагсаалт руу буцах</Link>
@@ -69,29 +95,20 @@ export default function CreateJobPage() {
           <p className="modal-kicker">Ажлын зар</p>
           <h2>Эхлээд нэвтэрнэ үү</h2>
           <p className="modal-subtitle">Ажлын зар нийтлэхийн тулд Project X бүртгэлдээ нэвтэрсэн байх шаардлагатай.</p>
-          <Link className="modal-submit" href="/jobs">Ажлын жагсаалт руу очих <Icon name="arrow" /></Link>
-        </section> : <section className="jobs-modal post-modal job-form-card">
-          <p className="modal-kicker">Шинэ ажил</p>
-          <h2>Ажлын зар байршуулах</h2>
-          <p className="modal-subtitle">Бүтээлч мэргэжилтнүүдэд хүрэх ажлын зарыг дэлгэрэнгүй бичээрэй.</p>
-          <form onSubmit={(event) => void submit(event)} className="post-form">
-            <label>Ажлын гарчиг<input required value={jobForm.title} onChange={(event) => setJobForm({ ...jobForm, title: event.target.value })} placeholder="Жишээ: UX/UI дизайнер" /></label>
-            <label>Байгууллага<input required value={jobForm.company} onChange={(event) => setJobForm({ ...jobForm, company: event.target.value })} placeholder="Танай байгууллагын нэр" /></label>
-            <div className="post-form-grid">
-              <label>Байршил<input value={jobForm.location} onChange={(event) => setJobForm({ ...jobForm, location: event.target.value })} /></label>
-              <label>Цалин / төсөв<input value={jobForm.salary} onChange={(event) => setJobForm({ ...jobForm, salary: event.target.value })} placeholder="₮4.0–6.0 сая / сар" /></label>
-              <label>Ажлын төрөл<select value={jobForm.employmentType} onChange={(event) => setJobForm({ ...jobForm, employmentType: event.target.value as EmploymentType })}><option value="full_time">Бүтэн цаг</option><option value="freelance">Freelance</option><option value="contract">Гэрээт</option></select></label>
-              <label>Ажиллах хэлбэр<select value={jobForm.workMode} onChange={(event) => setJobForm({ ...jobForm, workMode: event.target.value as WorkMode })}><option value="hybrid">Hybrid</option><option value="remote">Remote</option><option value="on_site">On-site</option></select></label>
-            </div>
-            <label>Тайлбар<textarea required value={jobForm.description} onChange={(event) => setJobForm({ ...jobForm, description: event.target.value })} rows={4} placeholder="Энэ үүргийн зорилго, баг, сонирхолтой боломжийн тухай..." /></label>
-            <label>Ур чадвар <span>(мөр тус бүрд нэг)</span><textarea value={jobForm.skills} onChange={(event) => setJobForm({ ...jobForm, skills: event.target.value })} rows={3} placeholder={"Figma\nUX Research\nDesign systems"} /></label>
-            <label>Хийх ажил <span>(мөр тус бүрд нэг)</span><textarea value={jobForm.responsibilities} onChange={(event) => setJobForm({ ...jobForm, responsibilities: event.target.value })} rows={3} placeholder={"User flow боловсруулах\nDesign system өргөжүүлэх"} /></label>
-            <label>Шаардлага <span>(мөр тус бүрд нэг)</span><textarea value={jobForm.requirements} onChange={(event) => setJobForm({ ...jobForm, requirements: event.target.value })} rows={3} placeholder={"2+ жилийн туршлагатай\nPortfolio илгээх"} /></label>
-            {error && <p className="form-error">{error}</p>}
-            <button className="modal-submit" disabled={busy} type="submit">{busy ? "Нийтэлж байна…" : "Ажлын зар нийтлэх"}<Icon name="arrow" /></button>
-          </form>
-        </section>}
+          <button type="button" className="modal-submit" onClick={() => setAuthOpen(true)}>Нэвтрэх <Icon name="arrow" /></button>
+        </section> : <PostJobForm form={jobForm} onFormChange={setJobForm} onSubmit={(event) => void submit(event)} busy={busy} error={error} />}
       </div>
     </div>
+    {authOpen && <AuthDialog
+      variant="jobs"
+      mode={authMode} onModeChange={setAuthMode}
+      name={authName} onNameChange={setAuthName}
+      email={authEmail} onEmailChange={setAuthEmail}
+      password={authPassword} onPasswordChange={setAuthPassword}
+      busy={authBusy}
+      subtitle="Ажлын зар нийтлэхийн тулд нэвтэрнэ үү."
+      onClose={() => setAuthOpen(false)} onSubmit={(event) => void submitAuth(event)}
+    />}
+    <Toast message={toast} className="jobs-toast" />
   </main>;
 }

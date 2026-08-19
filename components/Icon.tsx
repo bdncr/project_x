@@ -24,7 +24,21 @@ export type IconName =
   | "check"
   | "arrow"
   | "clock"
-  | "spark";
+  | "spark"
+  | "comment"
+  | "image"
+  | "grid"
+  | "video"
+  | "code"
+  | "cube"
+  | "cursor"
+  | "chevronUp"
+  | "alignLeft"
+  | "alignCenter"
+  | "alignRight"
+  | "lock"
+  | "link"
+  | "paperclip";
 
 const iconPaths: Record<IconName, ReactNode> = {
   search: <><circle cx="11" cy="11" r="6.3" /><path d="m16 16 4 4" /></>,
@@ -51,6 +65,20 @@ const iconPaths: Record<IconName, ReactNode> = {
   arrow: <path d="M5 12h14m-6-6 6 6-6 6" />,
   clock: <><circle cx="12" cy="12" r="8.5" /><path d="M12 7v5l3.5 2" /></>,
   spark: <path d="m12 3 1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3Z" />,
+  comment: <path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-5 4v-4H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" />,
+  image: <><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="8.5" cy="9.5" r="1.5" /><path d="m21 15-5-5-9 9" /></>,
+  grid: <><rect x="3" y="3" width="8" height="8" rx="1" /><rect x="13" y="3" width="8" height="8" rx="1" /><rect x="3" y="13" width="8" height="8" rx="1" /><rect x="13" y="13" width="8" height="8" rx="1" /></>,
+  video: <><rect x="3" y="6" width="13" height="12" rx="2" /><path d="m21 9-5 3 5 3V9Z" /></>,
+  code: <><path d="m8 6-5 6 5 6" /><path d="m16 6 5 6-5 6" /></>,
+  cube: <><path d="M12 3 3 8v8l9 5 9-5V8l-9-5Z" /><path d="M3 8l9 5 9-5" /><path d="M12 13v8" /></>,
+  cursor: <path d="M5 3l14 7-6 2-2 6-6-15Z" />,
+  chevronUp: <path d="m8 14 4-4 4 4" />,
+  alignLeft: <path d="M4 6h16M4 12h10M4 18h13" />,
+  alignCenter: <path d="M4 6h16M7 12h10M6 18h12" />,
+  alignRight: <path d="M4 6h16M10 12h10M7 18h13" />,
+  lock: <><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></>,
+  link: <><path d="m9 15 6-6" /><path d="M13 5.5 15 3.5a3.5 3.5 0 0 1 5 5L18 10.5" /><path d="M11 18.5 9 20.5a3.5 3.5 0 0 1-5-5L6 13.5" /></>,
+  paperclip: <path d="M21 12.5 12.5 21a5 5 0 0 1-7-7L14 5.5a3.5 3.5 0 0 1 5 5L10.5 19a2 2 0 0 1-3-3L15 8.5" />,
 };
 
 export function Icon({ name }: { name: IconName }) {

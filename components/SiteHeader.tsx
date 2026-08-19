@@ -6,7 +6,7 @@ import { Icon } from "./Icon";
 import { useAuth } from "../lib/AuthProvider";
 
 type SiteHeaderProps = {
-  activePage: "explore" | "jobs";
+  activePage: "explore" | "jobs" | "people";
   onLogin: () => void;
   onSignOut?: () => void;
 };
@@ -35,6 +35,7 @@ export function SiteHeader({ activePage, onLogin, onSignOut }: SiteHeaderProps) 
         <button type="button" aria-expanded={openMenu === "resources"} onClick={() => toggleMenu("resources")}>Нөөц <Icon name="chevron" /></button>
         {openMenu === "resources" && <div className="nav-menu"><Link href="/#explore" onClick={closeMenu}>Тойм</Link><Link href="/#explore" onClick={closeMenu}>Карьерын гарын авлага</Link><Link href="/#explore" onClick={closeMenu}>Захиалгат төсөл</Link><Link href="/#explore" onClick={closeMenu}>Бүтээлч сургалт</Link></div>}
       </div>
+      <span className="nav-divider" aria-hidden="true" />
       <div className="nav-dropdown" onMouseEnter={hoverOpen("hire")} onMouseLeave={hoverClose("hire")}>
         <button type="button" aria-expanded={openMenu === "hire"} onClick={() => toggleMenu("hire")}>Ажилтан авах <Icon name="chevron" /></button>
         {openMenu === "hire" && <div className="nav-menu"><Link href="/hire/jobs/create" onClick={closeMenu}>Фрийлансер хайх</Link><Link href="/#explore" onClick={closeMenu}>Үйлчилгээ хайх</Link><Link href="/jobs/create" onClick={closeMenu}>Ажлын зар оруулах</Link></div>}
@@ -44,7 +45,7 @@ export function SiteHeader({ activePage, onLogin, onSignOut }: SiteHeaderProps) 
       <div className="header-hover-menu share-hover" onMouseEnter={hoverOpen("share")} onMouseLeave={hoverClose("share")}>
         <button type="button" className="share-work" onClick={() => toggleMenu("share")} aria-expanded={openMenu === "share"}>Бүтээл нэмэх</button>
         {openMenu === "share" && <div className="nav-menu share-menu">
-          <Link href="/#share" onClick={closeMenu} className="share-menu-item">
+          <Link href="/project/create" onClick={closeMenu} className="share-menu-item">
             <span className="share-menu-icon"><Icon name="edit" /></span>
             <span><strong>Төсөл</strong><small>Дэлгэрэнгүй бүтээлээ нийтэл</small></span>
             <Icon name="arrow" />
@@ -80,7 +81,8 @@ export function SiteHeader({ activePage, onLogin, onSignOut }: SiteHeaderProps) 
               <strong>{displayName}</strong>
               <span>{user.email}</span>
             </div>
-            <Link href="/#manage" className="account-panel-link" onClick={closeMenu}><Icon name="briefcase" />Миний бүтээл</Link>
+            <Link href={`/profile/${user.id}`} className="account-panel-link" onClick={closeMenu}><Icon name="user" />Профайл</Link>
+            <Link href={`/profile/${user.id}`} className="account-panel-link" onClick={closeMenu}><Icon name="briefcase" />Миний бүтээл</Link>
             <button type="button" className="account-panel-link danger" onClick={() => void handleSignOut()}><Icon name="logout" />Гарах</button>
           </div>}
         </div>

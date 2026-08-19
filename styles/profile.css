@@ -1,0 +1,95 @@
+/* Profile: a Behance-style creator page — full-bleed cover photo, a left sidebar
+   reusing the people-grid card's avatar/stat/tag/button language (see people.css),
+   and a tabbed right column for the creator's work, services, and about info. */
+
+.profile-page { background: #fff; }
+
+/* 3200x410 is Behance's own suggested banner size (~7.8:1) — a wide, short strip,
+   not the taller "hero" bands used elsewhere on the site. */
+.profile-cover { position: relative; aspect-ratio: 3200 / 410; min-height: 130px; max-height: 320px; overflow: hidden; background: linear-gradient(135deg, #eef4ff, #f5eeff); }
+.profile-cover img { width: 100%; height: 100%; display: block; object-fit: cover; }
+.profile-cover-add { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; border: 0; background: transparent; color: #7683b0; cursor: pointer; }
+.profile-cover-add:hover { color: #1769ff; }
+.profile-cover-add svg { width: 26px; height: 26px; }
+.profile-cover-add span { font-size: 13px; font-weight: 750; }
+.profile-cover-add small { color: #98a3c8; font-size: 11px; font-weight: 600; }
+
+.profile-layout { max-width: 1200px; margin: 0 auto; padding: 0 clamp(20px, 5vw, 60px) 60px; display: grid; grid-template-columns: 280px 1fr; gap: 40px; align-items: start; }
+
+/* The avatar markup lives inside .profile-sidebar (not .profile-cover), so it's
+   positioned relative to the sidebar's own top edge rather than the cover's bottom
+   edge — same overlap technique as .creator-avatar-wrap in people.css otherwise:
+   the offset is exactly half the avatar's height so it straddles the boundary
+   between the cover above and the sidebar below (the two sit flush, no gap). */
+.profile-sidebar { position: relative; padding-top: 68px; text-align: center; }
+.profile-avatar-wrap { position: absolute; left: clamp(20px, 5vw, 60px); top: -54px; z-index: 3; }
+.profile-avatar { width: 108px; height: 108px; font-size: 34px; border: 4px solid #fff; box-shadow: 0 2px 10px rgba(0, 0, 0, .15); }
+.profile-pro { right: -2px; bottom: 8px; padding: 3px 7px; font-size: 9px; }
+.profile-sidebar h1 { margin: 0 0 2px; color: #191919; font-size: 20px; font-weight: 700; }
+.profile-role { margin: 0 0 8px; color: #555; font-size: 13px; font-weight: 650; }
+.profile-sidebar .creator-location { margin-bottom: 10px; }
+.profile-sidebar .creator-tags { margin-top: 0; margin-bottom: 4px; }
+.profile-actions { padding: 0; }
+.profile-edit-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 100%; }
+.profile-edit-btn svg { width: 14px; }
+
+/* About content (bio/skills/facts) folded into the sidebar rather than a separate
+   tab — matches the reference profile, where this lives below the action buttons,
+   not in the tabbed content area. */
+.profile-sidebar .profile-about { margin-top: 26px; padding-top: 22px; border-top: 1px solid #f0f0f0; text-align: left; }
+.profile-sidebar .profile-about section { margin-bottom: 22px; }
+.profile-sidebar .profile-about h3 { font-size: 11px; }
+.profile-sidebar .profile-about > section > p { font-size: 12px; line-height: 1.7; }
+
+.profile-main { min-width: 0; padding-top: 24px; }
+
+.profile-tabs { display: flex; gap: 0; margin-bottom: 24px; border-bottom: 1px solid #eee; }
+.profile-tab { min-height: 42px; padding: 0 4px; margin-right: 22px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: #888; font: inherit; font-size: 13px; font-weight: 700; }
+.profile-tab:hover { color: #191919; }
+.profile-tab.active { border-bottom-color: #1769ff; color: #1769ff; }
+
+.profile-work-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.profile-work-card { display: block; color: inherit; }
+.profile-work-thumb { display: block; aspect-ratio: 1.28 / 1; overflow: hidden; border-radius: 4px; background: #eee; }
+.profile-work-thumb img { width: 100%; height: 100%; display: block; object-fit: cover; transition: transform .25s ease; }
+.profile-work-card:hover .profile-work-thumb img { transform: scale(1.03); }
+.profile-work-title { display: block; margin-top: 10px; color: #191919; font-size: 13px; font-weight: 700; line-height: 1.4; }
+.profile-work-role { display: block; margin-top: 3px; color: #8a8a8a; font-size: 11px; font-weight: 600; }
+.profile-work-meta { display: flex; gap: 12px; margin-top: 8px; }
+.profile-work-meta span { display: inline-flex; align-items: center; gap: 4px; color: #9a9a9a; font-size: 11px; font-weight: 700; }
+.profile-work-meta svg { width: 13px; }
+
+.profile-service-card { display: flex; align-items: center; gap: 16px; padding: 24px; border: 1px solid #eaeaea; border-radius: 8px; text-align: left; }
+.profile-service-icon { width: 42px; height: 42px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 10px; background: #eaf1ff; color: #1769ff; }
+.profile-service-icon svg { width: 19px; }
+.profile-service-card h3 { margin: 0 0 6px; color: #191919; font-size: 14px; font-weight: 800; }
+.profile-service-card p { margin: 0; color: #666; font-size: 12px; line-height: 1.6; }
+/* .creator-message is normally grid-stretched full-width inside .creator-actions
+   (see people.css) — here it's a lone flex item, so it needs its own sizing. */
+.profile-service-card .creator-message { flex-shrink: 0; margin-left: auto; padding: 0 20px; }
+
+.profile-about section { margin-bottom: 28px; }
+.profile-about h3 { margin: 0 0 12px; color: #191919; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .3px; }
+.profile-about > section > p { margin: 0; color: #444; font-size: 13px; line-height: 1.75; }
+.profile-facts { display: grid; gap: 10px; margin: 0; }
+.profile-facts div { display: flex; justify-content: space-between; gap: 12px; padding-bottom: 10px; border-bottom: 1px solid #f0f0f0; }
+.profile-facts dt { color: #8a8a8a; font-size: 12px; font-weight: 650; }
+.profile-facts dd { margin: 0; color: #232323; font-size: 12px; font-weight: 700; }
+
+.edit-profile-tags { display: grid; gap: 8px; }
+.edit-profile-tags > span { color: #333; font-size: 13px; font-weight: 700; }
+.edit-profile-tag-options { display: flex; flex-wrap: wrap; gap: 10px; }
+.edit-profile-tag-option { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border: 1px solid #e2e2e2; border-radius: 16px; color: #444; font-size: 12px; font-weight: 650; cursor: pointer; }
+.edit-profile-tag-option input { margin: 0; }
+
+@media (max-width: 900px) {
+  .profile-layout { grid-template-columns: 1fr; gap: 16px; }
+  .profile-work-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 600px) {
+  .profile-avatar-wrap { left: 50%; transform: translateX(-50%); }
+  .profile-work-grid { grid-template-columns: 1fr; }
+  .profile-service-card { flex-direction: column; align-items: flex-start; text-align: left; }
+  .profile-service-card .creator-message { margin-left: 0; width: 100%; }
+}

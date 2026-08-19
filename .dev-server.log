@@ -1,0 +1,34 @@
+
+> project-x@0.1.0 dev
+> next dev
+
+▲ Next.js 16.3.0 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.56.1:3000
+✓ Ready in 892ms
+✓ Running next.config.ts took 60ms
+⚠ Slow filesystem detected. The benchmark took 289ms. If \\?\D:\project\harjoroo\project-x\.next\dev is a network drive, consider moving it to a local folder.
+See more: https://nextjs.org/docs/app/guides/local-development
+
+ GET /profile/92d576e5-5acb-4c9d-9fa3-78efbaf56b2a 200 in 1300ms (next.js: 975ms, application-code: 326ms)
+ GET /people 200 in 138ms (next.js: 51ms, application-code: 87ms)
+ GET /profile/%D1%82%D1%8D%D0%BC%D2%AF%D2%AF%D0%BB%D1%8D%D0%BD-%D0%B4 200 in 55ms (next.js: 21ms, application-code: 34ms)
+[browser] Detected `scroll-behavior: smooth` on the `<html>` element. To disable smooth scrolling during route transitions, add `data-scroll-behavior="smooth"` to your <html> element. Learn more: https://nextjs.org/docs/messages/missing-data-scroll-behavior
+ GET / 200 in 83ms (next.js: 67ms, application-code: 17ms)
+ GET /people 200 in 54ms (next.js: 9ms, application-code: 45ms)
+ GET /profile/%D1%82%D1%8D%D0%BC%D2%AF%D2%AF%D0%BB%D1%8D%D0%BD-%D0%B4 200 in 70ms (next.js: 27ms, application-code: 43ms)
+[browser] Detected `scroll-behavior: smooth` on the `<html>` element. To disable smooth scrolling during route transitions, add `data-scroll-behavior="smooth"` to your <html> element. Learn more: https://nextjs.org/docs/messages/missing-data-scroll-behavior
+ GET /jobs 200 in 66ms (next.js: 50ms, application-code: 17ms)
+[browser] Detected `scroll-behavior: smooth` on the `<html>` element. To disable smooth scrolling during route transitions, add `data-scroll-behavior="smooth"` to your <html> element. Learn more: https://nextjs.org/docs/messages/missing-data-scroll-behavior
+ GET / 200 in 19ms (next.js: 7ms, application-code: 12ms)
+ GET /people 200 in 22ms (next.js: 4ms, application-code: 18ms)
+ GET /profile/%D0%B1%D0%B0%D1%82%D1%82%D3%A9%D1%80-%D0%B4 200 in 34ms (next.js: 13ms, application-code: 22ms)
+ GET /people 200 in 37ms (next.js: 3ms, application-code: 34ms)
+ GET /profile/%D1%82%D1%8D%D0%BC%D2%AF%D2%AF%D0%BB%D1%8D%D0%BD-%D0%B4 200 in 40ms (next.js: 16ms, application-code: 24ms)
+[browser] Detected `scroll-behavior: smooth` on the `<html>` element. To disable smooth scrolling during route transitions, add `data-scroll-behavior="smooth"` to your <html> element. Learn more: https://nextjs.org/docs/messages/missing-data-scroll-behavior
+ GET /project/proj-07 200 in 859ms (next.js: 835ms, application-code: 25ms)
+ GET /profile/this-id-does-not-exist-xyz 200 in 51ms (next.js: 12ms, application-code: 39ms)
+ GET /people 200 in 60ms (next.js: 3ms, application-code: 57ms)
+ GET /profile/%D0%B1%D0%B0%D1%82%D1%82%D3%A9%D1%80-%D0%B4 200 in 53ms (next.js: 20ms, application-code: 33ms)
+[browser] Detected `scroll-behavior: smooth` on the `<html>` element. To disable smooth scrolling during route transitions, add `data-scroll-behavior="smooth"` to your <html> element. Learn more: https://nextjs.org/docs/messages/missing-data-scroll-behavior
+[?25h

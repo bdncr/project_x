@@ -1,0 +1,79 @@
+/* People: the "Хүмүүс" search/browse page — a hire-promo banner above a creator grid,
+   mirroring the reference Behance search-users page but in Project X's own brand. */
+/* Full-bleed inside .explore-section: cancels the section's own horizontal padding
+   (kept in sync with the two padding values .explore-section actually uses) so the
+   banner spans edge-to-edge without needing a section of its own — that would break
+   position: sticky on the toolbar above it, which needs a tall containing block. */
+.hire-banner { position: relative; min-height: 220px; margin: 0 -30px 24px; padding: 44px 30px; display: flex; align-items: center; justify-content: center; text-align: center; background: linear-gradient(180deg, rgba(10, 10, 15, .35), rgba(10, 10, 15, .72)), url("https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1800&q=70") center/cover; color: #fff; }
+.hire-banner-copy { max-width: 560px; }
+.hire-banner-copy h2 { margin: 0 0 10px; font-size: clamp(22px, 3vw, 32px); font-weight: 800; letter-spacing: -.6px; }
+.hire-banner-copy p { margin: 0 0 20px; color: #e4e4ea; font-size: 13px; font-weight: 600; line-height: 1.6; }
+.hire-banner-copy .hero-button { display: inline-flex; min-height: 38px; border-radius: 20px; font-size: 13px; }
+.hire-banner-person { position: absolute; right: 24px; bottom: 20px; display: flex; align-items: center; gap: 10px; }
+.hire-banner-person div { display: grid; gap: 1px; text-align: left; }
+.hire-banner-person strong { font-size: 12px; font-weight: 800; }
+.hire-banner-person span { color: #d6d6de; font-size: 11px; font-weight: 600; }
+
+/* People's toolbar sits flush against the full-bleed hire banner right below it,
+   unlike explore's toolbar which keeps its usual gap before the category rail. */
+.people-section .toolbar { margin-bottom: 0; }
+
+.creator-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; }
+/* The whole card navigates to /profile/[id] (see CreatorCard's onClick) — it's a
+   div, not an <a>, because it contains real buttons (Follow/Message) that need
+   their own click handlers, so this is a "role=link" card, not a native link. */
+.creator-card { overflow: hidden; border: 1px solid #e8e8e8; border-radius: 6px; background: #fff; text-align: center; display: flex; flex-direction: column; cursor: pointer; transition: box-shadow .18s ease, transform .18s ease, border-color .18s ease; }
+.creator-card:hover { border-color: #dcdcdc; box-shadow: 0 1px 10px rgba(0, 0, 0, .1); transform: translateY(-2px); }
+.creator-thumbs { height: 74px; position: relative; background: #eee; flex: 0 0 auto; }
+.creator-thumbs-row { display: flex; gap: 2px; width: 100%; height: 100%; overflow: hidden; }
+.creator-thumbs img, .creator-thumb-empty { flex: 1; min-width: 0; height: 100%; display: block; object-fit: cover; background: #e4e4e4; transition: transform .28s ease, filter .28s ease; }
+.creator-card:hover .creator-thumbs img { transform: scale(1.04); filter: brightness(.94); }
+.creator-thumbs.skeleton { display: block; }
+/* left/-50% overlap matches Behance's own UserSummaryInfo-ownerAvatar technique
+   (avatar sits in flow, transform: translate(0,-50%)) — bottom is exactly half the
+   avatar's own height so it straddles the thumbnail strip's bottom edge evenly. */
+.creator-avatar-wrap { position: absolute; left: 50%; bottom: -40px; z-index: 2; transform: translateX(-50%); }
+.creator-avatar { width: 80px; height: 80px; font-size: 25px; border: 2px solid #fff; box-shadow: 0 1px 5px rgba(25, 25, 25, .15); }
+.creator-pro { position: absolute; right: -2px; bottom: 4px; padding: 2px 6px; border-radius: 8px; background: #1769ff; color: #fff; font-size: 8px; font-weight: 800; box-shadow: 0 0 0 2px #fff; }
+
+/* flex column so .creator-actions can pin to the bottom via margin-top: auto —
+   otherwise cards without tags (the tags row is conditionally rendered) leave a
+   dead gap under the buttons instead of the buttons sitting flush at the card's
+   stretched grid-row height. */
+.creator-body { padding: 48px 16px 20px; display: flex; flex-direction: column; flex: 1; }
+.creator-body h3 { margin: 0 0 6px; color: #191919; font-size: 17px; font-weight: 600; }
+.creator-location { display: flex; align-items: center; justify-content: center; gap: 4px; margin: 0; color: #8a8a8a; font-size: 11px; font-weight: 650; }
+.creator-location svg { width: 12px; }
+
+.creator-tags { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 12px; }
+.creator-tags span { padding: 4px 10px; border: 1px solid #e2e2e2; border-radius: 12px; color: #666; font-size: 10px; font-weight: 750; }
+.creator-tags span.featured { border-color: #1769ff; background: #1769ff; color: #fff; }
+.creator-tags span.freelance { border-color: #e6cdfa; color: #9034c4; }
+.creator-tags span.fulltime { border-color: #cfe0ff; color: #1358c9; }
+.creator-tags span.services { border-color: #c9ecd8; color: #187a45; }
+
+.creator-stats { display: grid; grid-template-columns: repeat(3, 1fr); margin: 16px 0; padding: 14px 0; border-top: 1px solid #f0f0f0; border-bottom: 1px solid #f0f0f0; }
+.creator-stats div { position: relative; }
+.creator-stats div:not(:last-child)::after { content: ""; position: absolute; right: 0; top: 3px; width: 1px; height: calc(100% - 6px); background: #ccc; }
+.creator-stats b { display: block; color: #191919; font-size: 16px; font-weight: 600; }
+.creator-stats span { display: block; overflow: hidden; margin-top: 3px; color: #696969; font-size: 12px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+
+.creator-actions { display: grid; gap: 8px; padding: 0 16px; margin-top: auto; }
+.creator-follow { min-height: 34px; border: 1px solid #1769ff; border-radius: 17px; background: #1769ff; color: #fff; font-size: 11px; font-weight: 800; }
+.creator-follow.following { background: #eef4ff; color: #1769ff; }
+.creator-message { min-height: 34px; border: 1px solid #dfdfdf; border-radius: 17px; background: #fff; color: #4d4d4d; font-size: 11px; font-weight: 750; }
+.creator-message:hover { border-color: #c7d9fd; color: #1769ff; }
+
+@media (max-width: 1100px) {
+  .creator-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 760px) {
+  .hire-banner { min-height: 190px; margin: 0 -16px 20px; padding: 34px 20px; }
+  .hire-banner-person { position: static; margin-top: 18px; justify-content: center; }
+  .creator-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+}
+
+@media (max-width: 460px) {
+  .creator-grid { grid-template-columns: 1fr; }
+}

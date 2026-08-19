@@ -2,16 +2,30 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
-import { Icon as SharedIcon } from "../components/Icon";
 import { SiteHeader } from "../components/SiteHeader";
+import { SiteFooter } from "../components/SiteFooter";
+import { AuthDialog, AuthMode } from "../components/AuthDialog";
+import { Toast } from "../components/Toast";
+import { Toolbar } from "../components/Toolbar";
+import { HeroSection } from "../components/home/HeroSection";
+import { StatsRow } from "../components/home/StatsRow";
+import { CategoryRail } from "../components/home/CategoryRail";
+import { ContentGrid } from "../components/home/ContentGrid";
+import { ShareWorkForm, ContentForm } from "../components/home/ShareWorkForm";
+import { ManageWork } from "../components/home/ManageWork";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../lib/AuthProvider";
-import { ContentItem, ContentStatus, SAMPLE_PROJECTS } from "../lib/project-samples";
+import { ContentItem, loadDemoProjects } from "../lib/project-samples";
 
-type SortMode = "recommended" | "recent" | "liked" | "viewed";
-type AuthMode = "signin" | "signup";
-type ContentForm = { title: string; role: string; category: string; summary: string; coverUrl: string; status: ContentStatus };
 type ProjectRow = { id: string; owner_id: string | null; title: string; role: string; description: string; category: string; cover_url: string; view_count: number; is_published: boolean; published_at: string | null; created_at: string; profiles: { display_name: string; headline: string | null } | { display_name: string; headline: string | null }[] | null; project_likes: { count: number }[] | null };
+type SortMode = "recommended" | "recent" | "liked" | "viewed";
+
+const SORT_OPTIONS: [SortMode, string][] = [
+  ["recommended", "Санал болгох"],
+  ["recent", "Хамгийн сүүлийн"],
+  ["liked", "Хамгийн их таалагдсан"],
+  ["viewed", "Хамгийн их үзсэн"],
+];
 
 const categories = ["Бүгд", "Брэнд", "График", "Гэрэл зураг", "Зураглал", "UX/UI", "3D", "Motion"];
 const categoryArtwork: Record<string, string> = {
@@ -27,11 +41,6 @@ const categoryArtwork: Record<string, string> = {
 const emptyForm: ContentForm = { title: "", role: "", category: "Брэнд", summary: "", coverUrl: "", status: "published" };
 const defaultCover = "https://images.unsplash.com/photo-1541961017774-22349e4a1262?auto=format&fit=crop&w=1200&q=88";
 
-const Icon = SharedIcon;
-
-const compactNumber = (value: number) => new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(value);
-const textError = (error: unknown) => error instanceof Error ? error.message : "Тодорхойгүй алдаа гарлаа.";
-
 export default function Home() {
   const [items, setItems] = useState<ContentItem[]>([]);
   const [form, setForm] = useState<ContentForm>(emptyForm);
@@ -39,7 +48,6 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("Бүгд");
   const [sortMode, setSortMode] = useState<SortMode>("recommended");
-  const [selected, setSelected] = useState<ContentItem | null>(null);
   const [toast, setToast] = useState("");
   const { user, authReady } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -62,7 +70,7 @@ export default function Home() {
   const refreshProjects = async (currentUser: User | null) => {
     setLoading(true);
     if (!supabase) {
-      setItems(SAMPLE_PROJECTS);
+      setItems(loadDemoProjects());
       setDataMode("demo");
       setLoading(false);
       return;
@@ -70,7 +78,7 @@ export default function Home() {
     const { data, error } = await supabase.from("projects").select("id,owner_id,title,role,description,category,cover_url,view_count,is_published,published_at,created_at,profiles!projects_owner_id_fkey(display_name,headline),project_likes(count)").order("published_at", { ascending: false, nullsFirst: false });
     if (error || !data || data.length === 0) {
       if (error) notify(`Өгөгдөл ачаалж чадсангүй: ${error.message}`);
-      setItems(SAMPLE_PROJECTS);
+      setItems(loadDemoProjects());
       setDataMode("demo");
       setLoading(false);
       return;
@@ -97,10 +105,6 @@ export default function Home() {
     return (activeCategory === "Бүгд" || item.category === activeCategory) && allText.includes(term);
   }).sort((a, b) => sortMode === "recent" ? b.createdAt.localeCompare(a.createdAt) : sortMode === "liked" ? b.likes - a.likes : sortMode === "viewed" ? b.views - a.views : b.likes + b.views / 20 - (a.likes + a.views / 20)), [items, query, activeCategory, sortMode]);
 
-  const openItem = async (item: ContentItem) => {
-    setSelected({ ...item, views: item.views + 1 }); setItems((all) => all.map((x) => x.id === item.id ? { ...x, views: x.views + 1 } : x));
-    if (supabase && dataMode === "backend") { const { error } = await supabase.rpc("increment_project_views", { project_uuid: item.id }); if (error) console.warn(error.message); }
-  };
   const toggleLike = async (item: ContentItem) => {
     if (!requireUser()) return;
     const nextLiked = !item.liked; setItems((all) => all.map((x) => x.id === item.id ? { ...x, liked: nextLiked, likes: Math.max(0, x.likes + (nextLiked ? 1 : -1)) } : x));
@@ -121,9 +125,9 @@ export default function Home() {
   };
   const deleteItem = async (item: ContentItem) => {
     if (!requireUser() || !supabase || item.ownerId !== user?.id) return notify("Зөвхөн өөрийн бүтээлийг устгана.");
-    if (!window.confirm(`\"${item.title}\" бүтээлийг устгах уу?`)) return;
+    if (!window.confirm(`"${item.title}" бүтээлийг устгах уу?`)) return;
     const { error } = await supabase.from("projects").delete().eq("id", item.id); if (error) return notify(error.message);
-    setItems((all) => all.filter((x) => x.id !== item.id)); if (selected?.id === item.id) setSelected(null); if (editingId === item.id) { setEditingId(null); setForm(emptyForm); } notify("Бүтээл устлаа.");
+    setItems((all) => all.filter((x) => x.id !== item.id)); if (editingId === item.id) { setEditingId(null); setForm(emptyForm); } notify("Бүтээл устлаа.");
   };
   const saveContent = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault(); if (!requireUser() || !supabase || !user) return;
@@ -144,16 +148,35 @@ export default function Home() {
 
   return <main>
     <SiteHeader activePage="explore" onLogin={() => setAuthOpen(true)} onSignOut={() => notify("Системээс гарлаа.")} />
-    <section id="top" className="hero"><div className="hero-media" aria-hidden="true" /><div className="hero-copy"><p className="kicker">Монгол бүтээлчдийн нээлттэй галерей</p><h1>Project X</h1><p>Бүтээлээ нийтэлж, цуглуулж, бүтээлчдийн ажлыг нээж харах нэг цэгийн платформ.</p><div className="hero-actions"><a href="#share" className="hero-button"><Icon name="plus" /> Бүтээл нэмэх</a><a href="#explore" className="secondary-button">Галерей харах</a></div></div></section>
-    <section className="stats-row"><div><span>{ownedItems.length}</span><p>Миний бүтээл</p></div><div><span>{publishedCount}</span><p>Нийтлэгдсэн</p></div><div><span>{ownedItems.length - publishedCount}</span><p>Ноорог</p></div><div><span>{savedCount}</span><p>Хадгалсан</p></div></section>
-    <section id="explore" className="explore-section"><div className="toolbar"><button className="filter-trigger"><Icon name="filter" /> Шүүлтүүр</button><label className="search-box"><Icon name="search" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Project X-ээс хайх..." /></label><div className="content-kind"><button className="active">Төслүүд</button><button>Хүмүүс</button><button>Assets</button><button>Зургууд</button></div><div className="sort-dropdown"><button className="sort-selector" onClick={() => setSortMenuOpen(!sortMenuOpen)}><Icon name="filter" /><span>{sortMode === "recommended" ? "Санал болгох" : sortMode === "recent" ? "Хамгийн сүүлийн" : sortMode === "liked" ? "Их таалагдсан" : "Их үзсэн"}</span><Icon name="chevron" /></button>{sortMenuOpen && <div className="sort-menu">{([ ["recommended", "Санал болгох"], ["recent", "Хамгийн сүүлийн"], ["liked", "Хамгийн их таалагдсан"], ["viewed", "Хамгийн их үзсэн"] ] as [SortMode, string][]).map(([value, label]) => <button key={value} className={sortMode === value ? "active" : ""} onClick={() => { setSortMode(value); setSortMenuOpen(false); }}>{label}</button>)}</div>}</div></div><div className="topic-rack">{categories.map((category) => <button key={category} className={activeCategory === category ? "topic-card active" : "topic-card"} onClick={() => setActiveCategory(category)} style={{ backgroundImage: `linear-gradient(90deg, rgba(9,12,22,.72), rgba(9,12,22,.18)), url(${categoryArtwork[category]})` }}><span>{category === "Бүгд" ? "Танд" : category}</span></button>)}</div><div className="feed-heading"><h2>Танд санал болгох</h2><button><Icon name="filter" /> Feed-ээ тохируулах</button></div>
-      {loading ? <div className="content-grid">{Array.from({ length: 8 }).map((_, index) => <article className="content-card" key={index} aria-hidden="true"><span className="image-button skeleton" /><div className="card-body"><span className="skeleton skeleton-line" style={{ width: "35%" }} /><span className="skeleton skeleton-line" style={{ width: "80%", height: 14, marginTop: 10 }} /><span className="skeleton skeleton-line" style={{ width: "55%", marginTop: 8 }} /></div></article>)}</div> : <div className="content-grid">{visibleItems.map((item) => <article className="content-card" key={item.id}><button className="image-button" onClick={() => void openItem(item)}><img src={item.coverUrl} alt="" /><span className={item.status === "published" ? "status published" : "status"}>{item.status === "published" ? "Нийтэлсэн" : "Ноорог"}</span></button><div className="card-body"><div className="card-topline"><p>{item.category}</p><button className={item.saved ? "icon-action active" : "icon-action"} onClick={() => void toggleSave(item)}><Icon name="save" /></button></div><h3>{item.title}</h3><span>{item.creator} · {item.role}</span><div className="card-stats"><button className={item.liked ? "liked" : ""} onClick={() => void toggleLike(item)}><Icon name="heart" /> {compactNumber(item.likes)}</button><span><Icon name="eye" /> {compactNumber(item.views)}</span></div>{item.ownerId === user?.id && <div className="card-actions"><button onClick={() => editItem(item)}><Icon name="edit" /> Засах</button><button className="danger-button" onClick={() => void deleteItem(item)}><Icon name="trash" /> Устгах</button></div>}</div></article>)}</div>}
-      {!loading && visibleItems.length === 0 && <div className="empty-state"><h3>Илэрц алга</h3><p>Шинэ бүтээл нийтлээд эхлээрэй.</p></div>}</section>
-    <section id="share" className="editor-section"><div className="section-title"><p>Share Work</p><h2>{editingId ? "Бүтээл засах" : "Шинэ бүтээл нэмэх"}</h2></div>{!user && <div className="auth-hint"><p>Бүтээл оруулахын тулд нэвтэрсэн байх шаардлагатай.</p><button onClick={() => setAuthOpen(true)}>Нэвтрэх / Бүртгүүлэх</button></div>}<form className="editor-card" onSubmit={(e) => void saveContent(e)}><label>Гарчиг<input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></label><label>Төрөл<input value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} placeholder="UX/UI, зураглал..." /></label><label>Ангилал<select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>{categories.slice(1).map((x) => <option key={x}>{x}</option>)}</select></label><label>Төлөв<select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as ContentStatus })}><option value="published">Нийтлэх</option><option value="draft">Ноорог</option></select></label><label className="wide-field">Зургийн URL<input value={form.coverUrl} onChange={(e) => setForm({ ...form, coverUrl: e.target.value })} placeholder="https://..." /></label><label className="wide-field">Тайлбар<textarea value={form.summary} onChange={(e) => setForm({ ...form, summary: e.target.value })} rows={5} /></label><div className="preview-panel"><div className="mini-preview"><img src={form.coverUrl || defaultCover} alt="" /><p>{form.title || "Гарчиг харагдана"}</p><span>{user?.user_metadata.display_name || "Бүтээгч"} · {form.category}</span></div></div><div className="form-actions wide-field"><button type="submit"><Icon name="upload" /> {editingId ? "Шинэчлэх" : "Нийтлэх"}</button>{editingId && <button type="button" className="ghost-button" onClick={() => { setEditingId(null); setForm(emptyForm); }}><Icon name="close" /> Болих</button>}</div></form></section>
-    <section id="manage" className="manage-section"><div className="section-title"><p>My work</p><h2>Миний бүтээл</h2></div>{!user ? <div className="empty-state"><p>Нэвтэрсний дараа та өөрийн бүтээлээ энд удирдана.</p></div> : <div className="manage-list">{ownedItems.map((item) => <article key={item.id} className="manage-row"><img src={item.coverUrl} alt="" /><div><h3>{item.title}</h3><p>{item.category} · {item.status === "published" ? "Нийтэлсэн" : "Ноорог"}</p></div><span>{compactNumber(item.likes)} талархал</span><button onClick={() => editItem(item)}><Icon name="edit" /></button><button className="danger-icon" onClick={() => void deleteItem(item)}><Icon name="trash" /></button></article>)}{ownedItems.length === 0 && <div className="empty-state"><p>Таны нийтэлсэн бүтээл алга байна.</p></div>}</div>}</section>
-    <footer><a className="brand" href="#top"><span>Project</span><b>X</b></a><p>© 2026 Project X. Улаанбаатар.</p><span>{supabase ? "Supabase backend холбогдсон" : "Backend тохируулаагүй"}</span></footer>
-    {selected && <div className="modal-backdrop" onClick={() => setSelected(null)}><section className="content-modal" onClick={(e) => e.stopPropagation()}><button className="modal-close" onClick={() => setSelected(null)}><Icon name="close" /></button><div className="modal-media"><img src={selected.coverUrl} alt="" /><aside className="modal-rail"><button className={selected.saved ? "rail-btn active" : "rail-btn"} onClick={() => void toggleSave(selected)}><Icon name={selected.saved ? "bookmarkFill" : "bookmark"} /><span>Хадгалах</span></button><button className={selected.liked ? "rail-btn active liked" : "rail-btn"} onClick={() => void toggleLike(selected)}><Icon name="heart" /><span>{compactNumber(selected.likes)}</span></button></aside></div><div className="modal-copy"><p>{selected.category} · {selected.status === "published" ? "Нийтэлсэн" : "Ноорог"}</p><h2>{selected.title}</h2><span>{selected.creator} · {selected.role}</span><div className="modal-about"><p className="modal-about-label">Төслийн тухай</p><p>{selected.summary}</p></div><div className="modal-stats"><span><Icon name="heart" /> {compactNumber(selected.likes)}</span><span><Icon name="eye" /> {compactNumber(selected.views)}</span></div>{selected.ownerId === user?.id && <div className="card-actions"><button onClick={() => { editItem(selected); setSelected(null); }}><Icon name="edit" /> Засах</button><button className="danger-button" onClick={() => void deleteItem(selected)}><Icon name="trash" /> Устгах</button></div>}</div></section></div>}
-    {authOpen && <div className="modal-backdrop" onClick={() => setAuthOpen(false)}><section className="auth-dialog" onClick={(e) => e.stopPropagation()}><button className="modal-close" onClick={() => setAuthOpen(false)}><Icon name="close" /></button><p className="kicker">Project X account</p><h2>{authMode === "signin" ? "Нэвтрэх" : "Бүртгэл үүсгэх"}</h2><form onSubmit={(e) => void submitAuth(e)}>{authMode === "signup" && <label>Нэр<input required value={displayName} onChange={(e) => setDisplayName(e.target.value)} /></label>}<label>Имэйл<input required type="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} /></label><label>Нууц үг<input required type="password" minLength={6} value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} /></label><button className="auth-submit" disabled={authBusy}>{authBusy ? "Түр хүлээнэ үү…" : authMode === "signin" ? "Нэвтрэх" : "Бүртгүүлэх"}</button></form><button className="auth-switch" onClick={() => setAuthMode(authMode === "signin" ? "signup" : "signin")}>{authMode === "signin" ? "Шинэ хэрэглэгч үү? Бүртгүүлэх" : "Бүртгэлтэй юу? Нэвтрэх"}</button></section></div>}
-    {toast && <div className="toast">{toast}</div>}
+    <HeroSection />
+    <StatsRow total={ownedItems.length} published={publishedCount} drafts={ownedItems.length - publishedCount} saved={savedCount} />
+    <section id="explore" className="explore-section">
+      <Toolbar<SortMode>
+        activeKind="projects"
+        query={query} onQueryChange={setQuery} searchPlaceholder="Project X-ээс хайх..."
+        sortMode={sortMode} onSortModeChange={(value) => { setSortMode(value); setSortMenuOpen(false); }}
+        sortMenuOpen={sortMenuOpen} onToggleSortMenu={() => setSortMenuOpen((open) => !open)}
+        sortOptions={SORT_OPTIONS}
+      />
+      <CategoryRail categories={categories} categoryArtwork={categoryArtwork} activeCategory={activeCategory} onActiveCategoryChange={setActiveCategory} />
+      <ContentGrid loading={loading} items={visibleItems} currentUserId={user?.id} onToggleLike={toggleLike} onToggleSave={toggleSave} onEdit={editItem} onDelete={deleteItem} />
+    </section>
+    <ShareWorkForm
+      editingId={editingId} form={form} onFormChange={setForm}
+      onSubmit={(event) => void saveContent(event)} onCancelEdit={() => { setEditingId(null); setForm(emptyForm); }}
+      isLoggedIn={!!user} onRequestLogin={() => setAuthOpen(true)}
+      categories={categories.slice(1)} defaultCover={defaultCover}
+      previewCreatorLabel={user?.user_metadata.display_name || "Бүтээгч"}
+    />
+    <ManageWork isLoggedIn={!!user} items={ownedItems} onEdit={editItem} onDelete={deleteItem} />
+    <SiteFooter homeHref="#top" backendConnected={!!supabase} />
+    {authOpen && <AuthDialog
+      mode={authMode} onModeChange={setAuthMode}
+      name={displayName} onNameChange={setDisplayName}
+      email={authEmail} onEmailChange={setAuthEmail}
+      password={authPassword} onPasswordChange={setAuthPassword}
+      busy={authBusy} onClose={() => setAuthOpen(false)} onSubmit={(event) => void submitAuth(event)}
+    />}
+    <Toast message={toast} />
   </main>;
 }

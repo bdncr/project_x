@@ -1,3 +1,5 @@
+import type { ProjectBlock } from "./project-editor";
+
 export type ContentStatus = "published" | "draft";
 
 export type ContentItem = {
@@ -15,6 +17,12 @@ export type ContentItem = {
   liked: boolean;
   status: ContentStatus;
   createdAt: string;
+  /** Rich block content from the project editor. Absent for the seed/demo dataset,
+   * which instead gets a synthesized case-study body (see projectGallery/projectOverview). */
+  blocks?: ProjectBlock[];
+  /** An optional call-to-action button set from the editor's "Захиалгат товч" panel. */
+  customButtonLabel?: string;
+  customButtonUrl?: string;
 };
 
 function sample(
@@ -33,6 +41,42 @@ function sample(
 }
 
 const img = (photoId: string, crop = "3:4") => `https://images.unsplash.com/photo-${photoId}?auto=format&fit=crop&w=800&h=${crop === "3:4" ? 1000 : crop === "1:1" ? 800 : 600}&q=80`;
+
+const CATEGORY_TOOLS: Record<string, string[]> = {
+  "Брэнд": ["Adobe Illustrator", "Photoshop", "Брэндийн гарын авлага", "Typography"],
+  "График": ["InDesign", "Illustrator", "Хэвлэлийн бэлтгэл", "Typography"],
+  "Гэрэл зураг": ["Lightroom", "Capture One", "Студийн гэрэлтүүлэг", "Retouching"],
+  "Зураглал": ["Procreate", "Photoshop", "Дүрийн дизайн", "Concept Art"],
+  "UX/UI": ["Figma", "Prototyping", "Хэрэглэгчийн судалгаа", "Design systems"],
+  "3D": ["Blender", "Cinema 4D", "V-Ray", "Substance Painter"],
+  "Motion": ["After Effects", "Cinema 4D", "Premiere Pro", "Sound design"],
+};
+
+export function toolsForCategory(category: string): string[] {
+  return CATEGORY_TOOLS[category] ?? ["Adobe Creative Suite", "Figma", "Урсгал зохион байгуулалт"];
+}
+
+/** Derives a sequence of differently-cropped case-study frames from one cover photo. */
+export function projectGallery(coverUrl: string): string[] {
+  const base = coverUrl.split("?")[0];
+  if (!base) return [];
+  const variant = (w: number, h: number, crop: string) => `${base}?auto=format&fit=crop&w=${w}&h=${h}&q=85&crop=${crop}`;
+  return [
+    variant(1760, 990, "entropy"),
+    variant(1200, 1500, "faces"),
+    variant(1760, 1100, "edges"),
+    variant(1200, 900, "entropy"),
+    variant(1760, 1180, "top"),
+  ];
+}
+
+export function projectOverview(item: Pick<ContentItem, "summary" | "category" | "role">): string[] {
+  return [
+    item.summary,
+    `${item.role}-ийн үүднээс би санаа тодорхойлохоос эхлээд эцсийн хүргэлт хүртэлх бүх шатыг хариуцлаа: судалгаа, олон хувилбарын эскиз, санал асуулга, эцсийн шийдвэрийг нарийвчлан гүйцэтгэсэн.`,
+    `Эцсийн үр дүн нь ${item.category.toLowerCase()} чиглэлээр захиалагчийн зорилтод бүрэн нийцсэн, цаашид өргөтгөх боломжтой тогтвортой визуал шийдэл болсон.`,
+  ];
+}
 
 export const SAMPLE_PROJECTS: ContentItem[] = [
   sample("proj-01", "Nomad Coffee — брэндийн айдентик", "Наранцэцэг Б.", "Brand Designer", "Брэнд", "Улаанбаатарын шинэ кофе шопын лого, савлагаа, дэлгүүрийн бүрэн визуал системийг боловсрууллаа.", img("1561070791-2526d30994b5", "1:1"), 142, 2300, "2026-08-10T08:00:00.000Z"),
@@ -56,3 +100,26 @@ export const SAMPLE_PROJECTS: ContentItem[] = [
   sample("proj-19", "Brand Motion Reel 2026", "Туяа Э.", "Motion Designer", "Motion", "Оны турш хийсэн шилдэг ажлуудыг нэгтгэсэн богино хэлбэрийн motion reel.", img("1531058020387-3be344556be6", "3:4"), 221, 3600, "2026-08-14T14:00:00.000Z"),
   sample("proj-20", "App Onboarding анимаци", "Мишээл Р.", "Motion Designer", "Motion", "Аппын эхлэлийн дэлгэцүүдэд зориулсан богино микро-анимацийн цуврал.", img("1531058020387-3be344556be6", "1:1"), 96, 1550, "2026-08-05T14:00:00.000Z"),
 ];
+
+const LOCAL_PROJECTS_KEY = "project-x-local-projects";
+
+/** Demo-mode persistence for projects created without a configured backend, mirroring
+ * the jobs board's local-draft pattern in lib/jobs-data.ts. */
+export function loadLocalProjects(): ContentItem[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const value = JSON.parse(window.localStorage.getItem(LOCAL_PROJECTS_KEY) || "[]");
+    return Array.isArray(value) ? (value as ContentItem[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function addLocalProject(item: ContentItem) {
+  window.localStorage.setItem(LOCAL_PROJECTS_KEY, JSON.stringify([item, ...loadLocalProjects()]));
+}
+
+/** All projects available in demo mode: locally-created projects first, then the seed gallery. */
+export function loadDemoProjects(): ContentItem[] {
+  return [...loadLocalProjects(), ...SAMPLE_PROJECTS];
+}

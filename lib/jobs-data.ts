@@ -1,4 +1,4 @@
-import { EmploymentType, Job, WorkMode } from "./job-samples";
+import { EmploymentType, Job, SAMPLE_JOBS, WorkMode } from "./job-samples";
 
 export type DatabaseJobRow = {
   id: string;
@@ -149,4 +149,42 @@ export function loadLocalJobs(): Job[] {
 
 export function addLocalJob(job: Job) {
   window.localStorage.setItem(LOCAL_JOBS_KEY, JSON.stringify([job, ...loadLocalJobs()]));
+}
+
+/** All jobs available in demo mode: locally-posted jobs first, then the seed listings. */
+export function loadDemoJobs(): Job[] {
+  return [...loadLocalJobs(), ...SAMPLE_JOBS];
+}
+
+/** Reads a demo-mode id list ("saved" or "applied") persisted to localStorage. */
+export function loadDemoJobState(key: "saved" | "applied"): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const value = JSON.parse(window.localStorage.getItem("project-x-jobs-" + key) || "[]");
+    return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+export function persistDemoJobState(key: "saved" | "applied", value: string[]) {
+  window.localStorage.setItem("project-x-jobs-" + key, JSON.stringify(value));
+}
+
+export function friendlyEmploymentType(type: EmploymentType) {
+  return type === "full_time" ? "Бүтэн цаг" : type === "freelance" ? "Freelance" : "Гэрээт";
+}
+
+export function friendlyWorkMode(mode: WorkMode) {
+  return mode === "remote" ? "Remote" : mode === "hybrid" ? "Hybrid" : "On-site";
+}
+
+export function relativeDate(value: string) {
+  const elapsed = Math.max(0, Date.now() - new Date(value).getTime());
+  const hours = Math.floor(elapsed / 3600000);
+  if (hours < 1) return "Саяхан";
+  if (hours < 24) return String(hours) + " цагийн өмнө";
+  const days = Math.floor(hours / 24);
+  if (days < 7) return String(days) + " өдрийн өмнө";
+  return String(Math.floor(days / 7)) + " долоо хоногийн өмнө";
 }

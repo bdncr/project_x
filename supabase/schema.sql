@@ -12,6 +12,19 @@ create table if not exists public.profiles (
   updated_at timestamptz not null default now()
 );
 
+-- People directory: location/tags/pro status shown on the "Хүмүүс" search page.
+alter table public.profiles add column if not exists location text not null default 'Улаанбаатар';
+alter table public.profiles add column if not exists employment_tags text[] not null default '{}';
+alter table public.profiles add column if not exists is_pro boolean not null default false;
+-- Profile page banner, separate from any project cover (matches Behance's own
+-- "Add a Banner Image" profile field). Nullable — the profile page falls back to
+-- the creator's top project cover when unset.
+alter table public.profiles add column if not exists cover_url text;
+
+-- Seed people (below) aren't real logins, the same way seed projects/jobs have no
+-- real owner — so profiles.id can't stay FK'd to auth.users for every row.
+alter table public.profiles drop constraint if exists profiles_id_fkey;
+
 create table if not exists public.projects (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references public.profiles(id) on delete cascade,
@@ -30,6 +43,12 @@ create table if not exists public.projects (
 alter table public.projects add column if not exists role text not null default 'Бүтээлч ажил';
 alter table public.projects add column if not exists view_count integer not null default 0;
 alter table public.projects add column if not exists external_key text unique;
+-- Rich block content from the project editor (Image/Text/Photo Grid/Video/Embed/...).
+-- Empty for the seed gallery, which instead gets a synthesized case-study body client-side.
+alter table public.projects add column if not exists body_blocks jsonb not null default '[]'::jsonb;
+-- Optional call-to-action button set from the editor's "Захиалгат товч" sidebar panel.
+alter table public.projects add column if not exists custom_button_label text;
+alter table public.projects add column if not exists custom_button_url text;
 alter table public.projects alter column owner_id drop not null;
 
 create table if not exists public.project_likes (
@@ -46,10 +65,21 @@ create table if not exists public.project_saves (
   primary key (project_id, user_id)
 );
 
+-- Following a creator on the People page.
+create table if not exists public.profile_follows (
+  follower_id uuid not null references public.profiles(id) on delete cascade,
+  followee_id uuid not null references public.profiles(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (follower_id, followee_id),
+  check (follower_id <> followee_id)
+);
+
 create index if not exists projects_feed_idx on public.projects (is_published, published_at desc);
 create index if not exists projects_owner_idx on public.projects (owner_id, updated_at desc);
 create index if not exists project_likes_project_idx on public.project_likes (project_id);
 create index if not exists project_saves_user_idx on public.project_saves (user_id);
+create index if not exists profile_follows_follower_idx on public.profile_follows (follower_id);
+create index if not exists profile_follows_followee_idx on public.profile_follows (followee_id);
 
 create or replace function public.increment_project_views(project_uuid uuid)
 returns void
@@ -65,6 +95,43 @@ begin
   end if;
 end;
 $$;
+
+-- Aggregated stats for the People page: appreciations/views summed across a creator's
+-- published projects, plus their follower count, without every page recomputing joins.
+create or replace view public.profile_directory as
+select
+  p.id,
+  p.username,
+  p.display_name,
+  p.avatar_url,
+  p.headline,
+  p.cover_url,
+  p.location,
+  p.employment_tags,
+  p.is_pro,
+  coalesce(proj.project_count, 0) as project_count,
+  coalesce(proj.project_views, 0) as project_views,
+  coalesce(proj.appreciations, 0) as appreciations,
+  coalesce(follows.followers, 0) as followers
+from public.profiles p
+left join (
+  select
+    pr.owner_id,
+    count(distinct pr.id) as project_count,
+    sum(pr.view_count) as project_views,
+    count(pl.*) as appreciations
+  from public.projects pr
+  left join public.project_likes pl on pl.project_id = pr.id
+  where pr.is_published
+  group by pr.owner_id
+) proj on proj.owner_id = p.id
+left join (
+  select followee_id, count(*) as followers
+  from public.profile_follows
+  group by followee_id
+) follows on follows.followee_id = p.id;
+
+grant select on public.profile_directory to anon, authenticated;
 
 -- Every signed-up user automatically gets the profile required by project ownership.
 create or replace function public.handle_new_user()
@@ -110,6 +177,7 @@ alter table public.profiles enable row level security;
 alter table public.projects enable row level security;
 alter table public.project_likes enable row level security;
 alter table public.project_saves enable row level security;
+alter table public.profile_follows enable row level security;
 
 drop policy if exists "Public profiles are readable" on public.profiles;
 create policy "Public profiles are readable" on public.profiles for select using (true);
@@ -134,6 +202,11 @@ drop policy if exists "Saves are readable to owner" on public.project_saves;
 create policy "Saves are readable to owner" on public.project_saves for select using (auth.uid() = user_id);
 drop policy if exists "Users manage their saves" on public.project_saves;
 create policy "Users manage their saves" on public.project_saves for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists "Follows are readable" on public.profile_follows;
+create policy "Follows are readable" on public.profile_follows for select using (true);
+drop policy if exists "Users manage their follows" on public.profile_follows;
+create policy "Users manage their follows" on public.profile_follows for all using (auth.uid() = follower_id) with check (auth.uid() = follower_id);
 
 -- Twenty starter portfolio projects (no real owner — idempotent, only insert once).
 insert into public.projects (external_key, title, role, description, category, cover_url, view_count, is_published, published_at) values
@@ -277,14 +350,37 @@ using (auth.uid() = applicant_id);
 -- The API roles need table privileges in addition to the row-level policies above.
 grant usage on schema public to anon, authenticated;
 
-grant select on public.profiles, public.projects, public.project_likes, public.job_posts to anon;
+grant select on public.profiles, public.projects, public.project_likes, public.job_posts, public.profile_follows to anon;
 
 grant select, update on public.profiles to authenticated;
 grant select, insert, update, delete on public.projects, public.project_likes, public.project_saves to authenticated;
 grant select, insert, update, delete on public.job_posts, public.job_saves, public.job_applications to authenticated;
+grant select, insert, delete on public.profile_follows to authenticated;
 
 grant execute on function public.increment_project_views(uuid) to anon, authenticated;
 notify pgrst, 'reload schema';
+
+-- Ten starter creator profiles for the "Хүмүүс" page. Not real accounts (see the
+-- dropped profiles_id_fkey above) — idempotent and safe to re-run, matched by id.
+insert into public.profiles (id, username, display_name, headline, location, employment_tags, is_pro, cover_url) values
+  ('a1b2c3d4-0000-4a11-8a11-000000000001', 'seed_zoljargal_b', 'Золжаргал Б.', 'Brand Designer', 'Улаанбаатар', array['Онцлох', 'Freelance'], true, 'https://images.unsplash.com/photo-1561070791-2526d30994b5?auto=format&fit=crop&w=1600&h=400&q=80'),
+  ('a1b2c3d4-0000-4a11-8a11-000000000002', 'seed_otgonbayar_t', 'Отгонбаяр Т.', 'UX/UI Designer', 'Улаанбаатар', array['Бүтэн цаг'], true, 'https://images.unsplash.com/photo-1551650975-87deedd944c3?auto=format&fit=crop&w=1600&h=400&q=80'),
+  ('a1b2c3d4-0000-4a11-8a11-000000000003', 'seed_sarangerel_d', 'Сарангэрэл Д.', 'Photographer', 'Улаанбаатар', array['Үйлчилгээ'], false, 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=1600&h=400&q=80'),
+  ('a1b2c3d4-0000-4a11-8a11-000000000004', 'seed_ganbaatar_e', 'Ганбаатар Э.', 'Illustrator', 'Дархан-Уул', array['Freelance'], false, 'https://images.unsplash.com/photo-1547891654-e66ed7ebb968?auto=format&fit=crop&w=1600&h=400&q=80'),
+  ('a1b2c3d4-0000-4a11-8a11-000000000005', 'seed_nominerdene_ts', 'Номин-Эрдэнэ Ц.', 'Motion Designer', 'Улаанбаатар', array['Бүтэн цаг'], true, 'https://images.unsplash.com/photo-1531058020387-3be344556be6?auto=format&fit=crop&w=1600&h=400&q=80'),
+  ('a1b2c3d4-0000-4a11-8a11-000000000006', 'seed_batchimeg_j', 'Батчимэг Ж.', '3D Artist', 'Эрдэнэт', array['Freelance'], false, 'https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?auto=format&fit=crop&w=1600&h=400&q=80'),
+  ('a1b2c3d4-0000-4a11-8a11-000000000007', 'seed_tumurbaatar_kh', 'Төмөрбаатар Х.', 'Graphic Designer', 'Улаанбаатар', array['Үйлчилгээ'], false, 'https://images.unsplash.com/photo-1618005198919-d3d4b5a92ead?auto=format&fit=crop&w=1600&h=400&q=80'),
+  ('a1b2c3d4-0000-4a11-8a11-000000000008', 'seed_urantsetseg_n', 'Уранцэцэг Н.', 'Editorial Designer', 'Ховд', array[]::text[], false, 'https://images.unsplash.com/photo-1618005198919-d3d4b5a92ead?auto=format&fit=crop&w=1600&h=400&q=80'),
+  ('a1b2c3d4-0000-4a11-8a11-000000000009', 'seed_erdenebayar_s', 'Эрдэнэбаяр С.', 'Product Designer', 'Улаанбаатар', array['Бүтэн цаг'], true, 'https://images.unsplash.com/photo-1551650975-87deedd944c3?auto=format&fit=crop&w=1600&h=400&q=80'),
+  ('a1b2c3d4-0000-4a11-8a11-000000000010', 'seed_munkhtsetseg_l', 'Мөнхцэцэг Л.', 'Character Illustrator', 'Улаанбаатар', array['Freelance'], false, 'https://images.unsplash.com/photo-1547891654-e66ed7ebb968?auto=format&fit=crop&w=1600&h=400&q=80')
+on conflict (id) do update set
+  username = excluded.username,
+  display_name = excluded.display_name,
+  headline = excluded.headline,
+  location = excluded.location,
+  employment_tags = excluded.employment_tags,
+  is_pro = excluded.is_pro,
+  cover_url = excluded.cover_url;
 
 -- Twenty realistic starter listings. These are idempotent and only insert once.
 insert into public.job_posts (external_key, title, company, location, work_mode, employment_type, salary_text, description, responsibilities, requirements, skills, company_color, hiring_contact, contact_role, applicants_count, published_at) values
