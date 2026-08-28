@@ -18,7 +18,7 @@
    unlike explore's toolbar which keeps its usual gap before the category rail. */
 .people-section .toolbar { margin-bottom: 0; }
 
-.creator-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; }
+.creator-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 20px; }
 /* The whole card navigates to /profile/[id] (see CreatorCard's onClick) — it's a
    div, not an <a>, because it contains real buttons (Follow/Message) that need
    their own click handlers, so this is a "role=link" card, not a native link. */

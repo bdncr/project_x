@@ -6,7 +6,7 @@
 
 /* 3200x410 is Behance's own suggested banner size (~7.8:1) — a wide, short strip,
    not the taller "hero" bands used elsewhere on the site. */
-.profile-cover { position: relative; aspect-ratio: 3200 / 410; min-height: 130px; max-height: 320px; overflow: hidden; background: linear-gradient(135deg, #eef4ff, #f5eeff); }
+.profile-cover { width: 100%; position: relative; aspect-ratio: 3200 / 410; min-height: 130px; max-height: 320px; overflow: hidden; background: linear-gradient(135deg, #eef4ff, #f5eeff); }
 .profile-cover img { width: 100%; height: 100%; display: block; object-fit: cover; }
 .profile-cover-add { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; border: 0; background: transparent; color: #7683b0; cursor: pointer; }
 .profile-cover-add:hover { color: #1769ff; }

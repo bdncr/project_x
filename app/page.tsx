@@ -4,9 +4,9 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { SiteHeader } from "../components/SiteHeader";
 import { SiteFooter } from "../components/SiteFooter";
-import { AuthDialog, AuthMode } from "../components/AuthDialog";
+import { AuthDialog, AuthMode } from "../components/auth/AuthDialog";
 import { Toast } from "../components/Toast";
-import { Toolbar } from "../components/Toolbar";
+import { Toolbar } from "../components/toolbar/Toolbar";
 import { HeroSection } from "../components/home/HeroSection";
 import { StatsRow } from "../components/home/StatsRow";
 import { CategoryRail } from "../components/home/CategoryRail";
@@ -14,6 +14,8 @@ import { ContentGrid } from "../components/home/ContentGrid";
 import { ShareWorkForm, ContentForm } from "../components/home/ShareWorkForm";
 import { ManageWork } from "../components/home/ManageWork";
 import { supabase } from "../lib/supabase";
+import { getCachedProjects, getSharedQuery, setCachedProjects, setSharedQuery } from "../lib/feed-cache";
+import { runAuthSubmit } from "../lib/auth-actions";
 import { useAuth } from "../lib/AuthProvider";
 import { ContentItem, loadDemoProjects } from "../lib/project-samples";
 
@@ -42,16 +44,18 @@ const emptyForm: ContentForm = { title: "", role: "", category: "Брэнд", su
 const defaultCover = "https://images.unsplash.com/photo-1541961017774-22349e4a1262?auto=format&fit=crop&w=1200&q=88";
 
 export default function Home() {
-  const [items, setItems] = useState<ContentItem[]>([]);
+  // Seeded from the cache so returning from Хүмүүс paints the last feed immediately
+  // instead of dropping back to skeletons while the same rows are fetched again.
+  const [items, setItems] = useState<ContentItem[]>(() => getCachedProjects()?.items ?? []);
   const [form, setForm] = useState<ContentForm>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(getSharedQuery);
   const [activeCategory, setActiveCategory] = useState("Бүгд");
   const [sortMode, setSortMode] = useState<SortMode>("recommended");
   const [toast, setToast] = useState("");
   const { user, authReady } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [dataMode, setDataMode] = useState<"backend" | "demo">("demo");
+  const [loading, setLoading] = useState(() => !getCachedProjects());
+  const [dataMode, setDataMode] = useState<"backend" | "demo">(() => getCachedProjects()?.dataMode ?? "demo");
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>("signin");
   const [authEmail, setAuthEmail] = useState("");
@@ -68,18 +72,21 @@ export default function Home() {
   };
 
   const refreshProjects = async (currentUser: User | null) => {
-    setLoading(true);
     if (!supabase) {
-      setItems(loadDemoProjects());
+      const demoItems = loadDemoProjects();
+      setItems(demoItems);
       setDataMode("demo");
+      setCachedProjects(demoItems, "demo");
       setLoading(false);
       return;
     }
     const { data, error } = await supabase.from("projects").select("id,owner_id,title,role,description,category,cover_url,view_count,is_published,published_at,created_at,profiles!projects_owner_id_fkey(display_name,headline),project_likes(count)").order("published_at", { ascending: false, nullsFirst: false });
     if (error || !data || data.length === 0) {
       if (error) notify(`Өгөгдөл ачаалж чадсангүй: ${error.message}`);
-      setItems(loadDemoProjects());
+      const demoItems = loadDemoProjects();
+      setItems(demoItems);
       setDataMode("demo");
+      setCachedProjects(demoItems, "demo");
       setLoading(false);
       return;
     }
@@ -92,7 +99,7 @@ export default function Home() {
       const profile = Array.isArray(project.profiles) ? project.profiles[0] : project.profiles;
       return { id: project.id, ownerId: project.owner_id ?? "seed", title: project.title, creator: profile?.display_name ?? "Project X", role: project.role || profile?.headline || "Бүтээлч", category: project.category, summary: project.description ?? "", coverUrl: project.cover_url, likes: project.project_likes?.[0]?.count ?? 0, views: project.view_count ?? 0, saved: savedIds.has(project.id), liked: likedIds.has(project.id), status: project.is_published ? "published" : "draft", createdAt: project.published_at ?? project.created_at };
     });
-    setItems(nextItems); setDataMode("backend"); setLoading(false);
+    setItems(nextItems); setDataMode("backend"); setCachedProjects(nextItems, "backend"); setLoading(false);
   };
 
   useEffect(() => {
@@ -138,11 +145,10 @@ export default function Home() {
     notify(editingId ? "Бүтээл шинэчлэгдлээ." : "Бүтээл нийтлэгдлээ."); setEditingId(null); setForm(emptyForm); await refreshProjects(user);
   };
   const submitAuth = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault(); if (!supabase) return; setAuthBusy(true);
-    const response = authMode === "signin" ? await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword }) : await supabase.auth.signUp({ email: authEmail, password: authPassword, options: { data: { display_name: displayName.trim() } } });
-    setAuthBusy(false); if (response.error) return notify(response.error.message);
-    if (authMode === "signup" && !response.data.session) notify("Баталгаажуулах имэйлээ шалгаад нэвтэрнэ үү."); else notify(authMode === "signin" ? "Амжилттай нэвтэрлээ." : "Бүртгэл амжилттай үүслээ.");
-    setAuthOpen(false); setAuthPassword("");
+    event.preventDefault(); setAuthBusy(true);
+    const result = await runAuthSubmit({ mode: authMode, email: authEmail, password: authPassword, displayName });
+    setAuthBusy(false); notify(result.message);
+    if (result.close) { setAuthOpen(false); setAuthPassword(""); }
   };
   const ownedItems = items.filter((item) => item.ownerId === user?.id); const publishedCount = ownedItems.filter((item) => item.status === "published").length; const savedCount = items.filter((item) => item.saved).length;
 
@@ -153,7 +159,7 @@ export default function Home() {
     <section id="explore" className="explore-section">
       <Toolbar<SortMode>
         activeKind="projects"
-        query={query} onQueryChange={setQuery} searchPlaceholder="Project X-ээс хайх..."
+        query={query} onQueryChange={(value) => { setQuery(value); setSharedQuery(value); }} searchPlaceholder="Project X-ээс хайх..."
         sortMode={sortMode} onSortModeChange={(value) => { setSortMode(value); setSortMenuOpen(false); }}
         sortMenuOpen={sortMenuOpen} onToggleSortMenu={() => setSortMenuOpen((open) => !open)}
         sortOptions={SORT_OPTIONS}

@@ -3,9 +3,8 @@ import { BlockPicker } from "./BlockPicker";
 import type { BlockType, EmbedKind } from "../../../lib/project-editor";
 
 type EditorSidebarProps = {
-  mode: "rich" | "simple";
   onAddBlock: (type: BlockType, kind?: EmbedKind) => void;
-  onScrollToSettings: () => void;
+  onOpenSettings: () => void;
   customButtonOpen: boolean;
   onToggleCustomButton: () => void;
   customButtonLabel: string;
@@ -20,18 +19,18 @@ type EditorSidebarProps = {
  * Settings are kept visible for layout fidelity but marked "тун удахгүй" — they'd need
  * file storage and a paid tier this app doesn't have, and a fake "free trial" link would
  * be actively misleading. */
-export function EditorSidebar({ mode, onAddBlock, onScrollToSettings, customButtonOpen, onToggleCustomButton, customButtonLabel, onCustomButtonLabelChange, customButtonUrl, onCustomButtonUrlChange }: EditorSidebarProps) {
+export function EditorSidebar({ onAddBlock, onOpenSettings, customButtonOpen, onToggleCustomButton, customButtonLabel, onCustomButtonLabelChange, customButtonUrl, onCustomButtonUrlChange }: EditorSidebarProps) {
   return <aside className="editor-sidebar">
     <div className="sidebar-card">
       <p className="sidebar-heading">Агуулга нэмэх</p>
-      {mode === "rich" ? <BlockPicker variant="sidebar" onAdd={onAddBlock} /> : <p className="sidebar-hint">Блок нэмэхийн тулд &quot;Дэлгэрэнгүй засварлагч&quot; горимд шилжинэ үү.</p>}
+      <BlockPicker variant="sidebar" onAdd={onAddBlock} />
     </div>
 
     <div className="sidebar-card">
       <p className="sidebar-heading">Төслийг засах</p>
       <div className="sidebar-edit-project">
         <button type="button" className="sidebar-edit-item" disabled title="Тун удахгүй"><Icon name="spark" /><span>Загвар</span></button>
-        <button type="button" className="sidebar-edit-item" onClick={onScrollToSettings}><Icon name="edit" /><span>Тохиргоо</span></button>
+        <button type="button" className="sidebar-edit-item" onClick={onOpenSettings}><Icon name="edit" /><span>Тохиргоо</span></button>
       </div>
       <button type="button" className="sidebar-pill-btn" onClick={onToggleCustomButton}>Захиалгат товч</button>
       <p className="sidebar-caption">Төслийн хуудсан дээр гарах call-to-action товчоо тохируулна уу</p>

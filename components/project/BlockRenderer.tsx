@@ -1,5 +1,5 @@
 import type { ProjectBlock } from "../../lib/project-editor";
-import { extractEmbedUrl, normalizeVideoEmbedUrl, sanitizeRichText } from "../../lib/project-editor";
+import { normalizeVideoEmbedUrl, safeEmbedUrl, sanitizeRichText } from "../../lib/project-editor";
 
 /** Read-only rendering of a project's rich block content on the public detail page.
  * Re-sanitizes text blocks at render time rather than trusting the editor's save-time
@@ -22,7 +22,9 @@ export function BlockRenderer({ blocks }: { blocks: ProjectBlock[] }) {
           return src ? <div key={block.id} className="block-embed-frame"><iframe src={src} loading="lazy" allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen /></div> : null;
         }
         case "embed": {
-          const src = block.url ? extractEmbedUrl(block.url) : "";
+          /* safeEmbedUrl, not the raw value: a stored embed block that is not an absolute
+             URL would resolve relative to this page and load the whole app inside itself. */
+          const src = block.url ? safeEmbedUrl(block.url) : null;
           return src ? <div key={block.id} className="block-embed-frame"><iframe src={src} loading="lazy" sandbox="allow-scripts allow-same-origin allow-presentation allow-popups" /></div> : null;
         }
       }

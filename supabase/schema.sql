@@ -51,6 +51,16 @@ alter table public.projects add column if not exists custom_button_label text;
 alter table public.projects add column if not exists custom_button_url text;
 alter table public.projects alter column owner_id drop not null;
 
+-- Fields owned by the create-project Settings modal (see components/project/editor/SettingsModal.tsx).
+-- "private" visibility never actually publishes regardless of the Publish button, enforced
+-- client-side in app/project/create/page.tsx — password/link-only stay editor-visible but
+-- Pro-locked, same as Behance's own reference, so they need no column.
+alter table public.projects add column if not exists tags text[] not null default '{}';
+alter table public.projects add column if not exists visibility text not null default 'everyone' check (visibility in ('everyone', 'private'));
+alter table public.projects add column if not exists is_mature boolean not null default false;
+alter table public.projects add column if not exists comments_disabled boolean not null default false;
+alter table public.projects add column if not exists license text not null default 'all_rights_reserved';
+
 create table if not exists public.project_likes (
   project_id uuid not null references public.projects(id) on delete cascade,
   user_id uuid not null references public.profiles(id) on delete cascade,
@@ -63,6 +73,33 @@ create table if not exists public.project_saves (
   user_id uuid not null references public.profiles(id) on delete cascade,
   created_at timestamptz not null default now(),
   primary key (project_id, user_id)
+);
+
+-- Comment thread under a case study (components/project/CommentsSection.tsx). The project's
+-- comments_disabled flag hides the composer in the UI; the insert policy below still allows a
+-- comment on a project whose author later re-enables them, which is the intended behaviour.
+create table if not exists public.project_comments (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references public.projects(id) on delete cascade,
+  author_id uuid not null references public.profiles(id) on delete cascade,
+  body text not null check (char_length(btrim(body)) between 1 and 1000),
+  created_at timestamptz not null default now()
+);
+
+-- A job offer sent straight to a creator from a project page: the invite dialog creates the
+-- listing above and this row is how the creator is actually told about it.
+create table if not exists public.job_offers (
+  job_id uuid references public.job_posts(id) on delete set null,
+  project_id uuid references public.projects(id) on delete set null,
+  id uuid primary key default gen_random_uuid(),
+  sender_id uuid not null references public.profiles(id) on delete cascade,
+  recipient_id uuid not null references public.profiles(id) on delete cascade,
+  title text not null check (char_length(btrim(title)) between 2 and 160),
+  budget text not null default '',
+  note text not null default '',
+  created_at timestamptz not null default now(),
+  read_at timestamptz,
+  check (sender_id <> recipient_id)
 );
 
 -- Following a creator on the People page.
@@ -78,6 +115,8 @@ create index if not exists projects_feed_idx on public.projects (is_published, p
 create index if not exists projects_owner_idx on public.projects (owner_id, updated_at desc);
 create index if not exists project_likes_project_idx on public.project_likes (project_id);
 create index if not exists project_saves_user_idx on public.project_saves (user_id);
+create index if not exists project_comments_project_idx on public.project_comments (project_id, created_at desc);
+create index if not exists job_offers_recipient_idx on public.job_offers (recipient_id, created_at desc);
 create index if not exists profile_follows_follower_idx on public.profile_follows (follower_id);
 create index if not exists profile_follows_followee_idx on public.profile_follows (followee_id);
 
@@ -98,21 +137,32 @@ $$;
 
 -- Aggregated stats for the People page: appreciations/views summed across a creator's
 -- published projects, plus their follower count, without every page recomputing joins.
-create or replace view public.profile_directory as
+-- security_invoker = on runs the view as the querying role instead of the view owner, so
+-- the base tables' RLS still applies. Postgres defaults views to security_invoker = off,
+-- which Supabase's advisor reports as the "Security Definer View" issue — every base table
+-- below already has a public select policy, so this changes nothing for anon/authenticated.
+-- Dropped and recreated rather than CREATE OR REPLACE'd: replace can only append columns
+-- at the end of the list, so it fails with Postgres error 42P16 the moment a column is
+-- inserted, reordered or renamed. Nothing depends on this view and the grant below is
+-- reissued straight after, so the drop is free and the column list stays free to change.
+drop view if exists public.profile_directory;
+create view public.profile_directory
+with (security_invoker = on) as
 select
   p.id,
   p.username,
   p.display_name,
   p.avatar_url,
   p.headline,
-  p.cover_url,
   p.location,
   p.employment_tags,
   p.is_pro,
   coalesce(proj.project_count, 0) as project_count,
   coalesce(proj.project_views, 0) as project_views,
   coalesce(proj.appreciations, 0) as appreciations,
-  coalesce(follows.followers, 0) as followers
+  coalesce(follows.followers, 0) as followers,
+  p.cover_url,
+  coalesce(thumbs.covers, '{}'::text[]) as thumbnails
 from public.profiles p
 left join (
   select
@@ -129,7 +179,25 @@ left join (
   select followee_id, count(*) as followers
   from public.profile_follows
   group by followee_id
-) follows on follows.followee_id = p.id;
+) follows on follows.followee_id = p.id
+left join (
+  -- Up to four covers from the creator's newest published work, for the 4-up thumbnail
+  -- strip on the People page cards (see components/people/CreatorCard.tsx).
+  select owner_id, array_agg(cover_url order by rn) as covers
+  from (
+    select
+      pr.owner_id,
+      pr.cover_url,
+      row_number() over (
+        partition by pr.owner_id
+        order by pr.published_at desc nulls last, pr.created_at desc
+      ) as rn
+    from public.projects pr
+    where pr.is_published and pr.owner_id is not null
+  ) ranked
+  where rn <= 4
+  group by owner_id
+) thumbs on thumbs.owner_id = p.id;
 
 grant select on public.profile_directory to anon, authenticated;
 
@@ -177,6 +245,8 @@ alter table public.profiles enable row level security;
 alter table public.projects enable row level security;
 alter table public.project_likes enable row level security;
 alter table public.project_saves enable row level security;
+alter table public.project_comments enable row level security;
+alter table public.job_offers enable row level security;
 alter table public.profile_follows enable row level security;
 
 drop policy if exists "Public profiles are readable" on public.profiles;
@@ -202,6 +272,34 @@ drop policy if exists "Saves are readable to owner" on public.project_saves;
 create policy "Saves are readable to owner" on public.project_saves for select using (auth.uid() = user_id);
 drop policy if exists "Users manage their saves" on public.project_saves;
 create policy "Users manage their saves" on public.project_saves for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists "Comments are readable" on public.project_comments;
+create policy "Comments are readable" on public.project_comments for select using (true);
+drop policy if exists "Users write their comments" on public.project_comments;
+create policy "Users write their comments" on public.project_comments for insert with check (auth.uid() = author_id);
+drop policy if exists "Users update their comments" on public.project_comments;
+create policy "Users update their comments" on public.project_comments for update using (auth.uid() = author_id) with check (auth.uid() = author_id);
+-- Deleting is open to the comment's author and to the project's owner, so a creator can
+-- moderate their own case study without an admin role.
+drop policy if exists "Authors and project owners delete comments" on public.project_comments;
+create policy "Authors and project owners delete comments" on public.project_comments for delete using (
+  auth.uid() = author_id
+  or exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
+);
+
+-- Private to the two parties, unlike every other table here: an offer carries a budget and a
+-- personal note, so there is no public select policy and no anon grant.
+drop policy if exists "Offers are readable by both parties" on public.job_offers;
+create policy "Offers are readable by both parties" on public.job_offers for select
+using (auth.uid() = recipient_id or auth.uid() = sender_id);
+drop policy if exists "Users send their own offers" on public.job_offers;
+create policy "Users send their own offers" on public.job_offers for insert with check (auth.uid() = sender_id);
+drop policy if exists "Recipients mark offers read" on public.job_offers;
+create policy "Recipients mark offers read" on public.job_offers for update
+using (auth.uid() = recipient_id) with check (auth.uid() = recipient_id);
+drop policy if exists "Both parties delete offers" on public.job_offers;
+create policy "Both parties delete offers" on public.job_offers for delete
+using (auth.uid() = recipient_id or auth.uid() = sender_id);
 
 drop policy if exists "Follows are readable" on public.profile_follows;
 create policy "Follows are readable" on public.profile_follows for select using (true);
@@ -350,12 +448,14 @@ using (auth.uid() = applicant_id);
 -- The API roles need table privileges in addition to the row-level policies above.
 grant usage on schema public to anon, authenticated;
 
-grant select on public.profiles, public.projects, public.project_likes, public.job_posts, public.profile_follows to anon;
+grant select on public.profiles, public.projects, public.project_likes, public.project_comments, public.job_posts, public.profile_follows to anon;
 
 grant select, update on public.profiles to authenticated;
 grant select, insert, update, delete on public.projects, public.project_likes, public.project_saves to authenticated;
 grant select, insert, update, delete on public.job_posts, public.job_saves, public.job_applications to authenticated;
 grant select, insert, delete on public.profile_follows to authenticated;
+grant select, insert, update, delete on public.project_comments to authenticated;
+grant select, insert, update, delete on public.job_offers to authenticated;
 
 grant execute on function public.increment_project_views(uuid) to anon, authenticated;
 notify pgrst, 'reload schema';
@@ -382,6 +482,37 @@ on conflict (id) do update set
   is_pro = excluded.is_pro,
   cover_url = excluded.cover_url;
 
+-- The seed projects above are inserted before these seed profiles exist, so they land with
+-- owner_id null and stay detached: profile_directory then reports project_count 0 with no
+-- thumbnails, and /profile/[id] finds nothing for "where owner_id = ...". Attach them here,
+-- once both sides exist, grouped by the discipline each seed creator's headline claims.
+update public.projects as pr
+set owner_id = seed_project_owners.owner_id
+from (values
+  ('seed-proj-01', 'a1b2c3d4-0000-4a11-8a11-000000000001'::uuid), -- Золжаргал Б. · Brand Designer
+  ('seed-proj-02', 'a1b2c3d4-0000-4a11-8a11-000000000001'::uuid),
+  ('seed-proj-03', 'a1b2c3d4-0000-4a11-8a11-000000000007'::uuid), -- Төмөрбаатар Х. · Graphic Designer
+  ('seed-proj-04', 'a1b2c3d4-0000-4a11-8a11-000000000007'::uuid),
+  ('seed-proj-05', 'a1b2c3d4-0000-4a11-8a11-000000000008'::uuid), -- Уранцэцэг Н. · Editorial Designer
+  ('seed-proj-06', 'a1b2c3d4-0000-4a11-8a11-000000000007'::uuid),
+  ('seed-proj-07', 'a1b2c3d4-0000-4a11-8a11-000000000003'::uuid), -- Сарангэрэл Д. · Photographer
+  ('seed-proj-08', 'a1b2c3d4-0000-4a11-8a11-000000000003'::uuid),
+  ('seed-proj-09', 'a1b2c3d4-0000-4a11-8a11-000000000003'::uuid),
+  ('seed-proj-10', 'a1b2c3d4-0000-4a11-8a11-000000000004'::uuid), -- Ганбаатар Э. · Illustrator
+  ('seed-proj-11', 'a1b2c3d4-0000-4a11-8a11-000000000010'::uuid), -- Мөнхцэцэг Л. · Character Illustrator
+  ('seed-proj-12', 'a1b2c3d4-0000-4a11-8a11-000000000004'::uuid),
+  ('seed-proj-13', 'a1b2c3d4-0000-4a11-8a11-000000000009'::uuid), -- Эрдэнэбаяр С. · Product Designer
+  ('seed-proj-14', 'a1b2c3d4-0000-4a11-8a11-000000000002'::uuid), -- Отгонбаяр Т. · UX/UI Designer
+  ('seed-proj-15', 'a1b2c3d4-0000-4a11-8a11-000000000002'::uuid),
+  ('seed-proj-16', 'a1b2c3d4-0000-4a11-8a11-000000000006'::uuid), -- Батчимэг Ж. · 3D Artist
+  ('seed-proj-17', 'a1b2c3d4-0000-4a11-8a11-000000000006'::uuid),
+  ('seed-proj-18', 'a1b2c3d4-0000-4a11-8a11-000000000006'::uuid),
+  ('seed-proj-19', 'a1b2c3d4-0000-4a11-8a11-000000000005'::uuid), -- Номин-Эрдэнэ Ц. · Motion Designer
+  ('seed-proj-20', 'a1b2c3d4-0000-4a11-8a11-000000000005'::uuid)
+) as seed_project_owners(external_key, owner_id)
+where pr.external_key = seed_project_owners.external_key
+  and pr.owner_id is distinct from seed_project_owners.owner_id;
+
 -- Twenty realistic starter listings. These are idempotent and only insert once.
 insert into public.job_posts (external_key, title, company, location, work_mode, employment_type, salary_text, description, responsibilities, requirements, skills, company_color, hiring_contact, contact_role, applicants_count, published_at) values
   ('seed-graphic-social', 'Graphic Designer and Social Media Manager', 'Nomad House Studio', 'Ulaanbaatar', 'on_site', 'full_time', '₮3.0–4.5 million / month', 'Own the visual identity and social content for a growing creative studio.', array['Create social and campaign visual assets', 'Maintain consistent brand execution', 'Work with marketing on content calendars'], array['2+ years of relevant experience', 'Strong portfolio', 'Comfortable collaborating with a small team'], array['Adobe Photoshop', 'Illustrator', 'Social media', 'Branding'], '#171717', 'Naran T.', 'Hiring manager', 14, now() - interval '3 hours'),
@@ -405,3 +536,5 @@ insert into public.job_posts (external_key, title, company, location, work_mode,
   ('seed-junior-designer', 'Junior Graphic Designer', 'Ekhlel Agency', 'Ulaanbaatar', 'on_site', 'full_time', '₮1.8–2.8 million / month', 'Join an agency team and grow through social, banner and presentation design work.', array['Prepare social posts and banners', 'Support senior designers', 'Keep project assets organised'], array['Entry-level portfolio', 'Open to feedback', 'Reliable teamwork'], array['Photoshop', 'Illustrator', 'Layout', 'Teamwork'], '#427ec4', 'Uyanga P.', 'Design lead', 31, now() - interval '10 days'),
   ('seed-creative-director', 'Creative Director', 'Steppe Ventures', 'Ulaanbaatar · Hybrid', 'hybrid', 'full_time', '₮6.0–9.0 million / month', 'Lead brand, product and launch campaigns for an international portfolio of startups.', array['Set the creative vision', 'Lead a multidisciplinary team', 'Partner with founders and clients'], array['Senior creative leadership experience', 'Strong multidisciplinary portfolio', 'Clear strategic communication'], array['Creative Direction', 'Leadership', 'Brand Strategy', 'Product'], '#1d2630', 'Gerelmaa J.', 'Managing partner', 3, now() - interval '12 days')
 on conflict (external_key) do nothing;
+
+notify pgrst, 'reload schema';

@@ -17,6 +17,11 @@
 
 html {
   scroll-behavior: smooth;
+  /* Reserve the scrollbar's width whether or not the page actually scrolls. Without this
+     the viewport is 15px narrower on a long route (the feed, Хүмүүс) than on a short one
+     (Ажлууд, Тохиргоо, the auth pages), so every navigation between the two shifts the
+     header, toolbar and grid sideways as the scrollbar appears and disappears. */
+  scrollbar-gutter: stable;
 }
 
 body {
@@ -24,6 +29,22 @@ body {
   color: var(--ink);
   background: var(--paper);
   font-family: Manrope, Arial, sans-serif;
+}
+
+/* Opt-in shell for routes whose content is shorter than the viewport (settings, the auth
+   pages), which would otherwise leave a band of white below the footer. Deliberately NOT
+   applied to main globally: a flex item with an auto cross-axis margin loses its stretch,
+   so every ".. { max-width: N; margin: 0 auto }" section — .explore-section above all —
+   collapses to its content width, which is visible as a narrow-then-wide jump while the
+   feed is still showing skeletons. Only pages whose children are known safe opt in. */
+main.page-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+main.page-shell>footer {
+  margin-top: auto;
 }
 
 button,
@@ -171,7 +192,7 @@ footer {
   letter-spacing: 0;
 }
 
-.hero-copy > p:not(.kicker) {
+.hero-copy>p:not(.kicker) {
   max-width: 470px;
   color: #dfddd7;
   font-size: 17px;
@@ -269,16 +290,27 @@ label {
   font-weight: 800;
 }
 
-input,
+/* Checkboxes and radios are excluded on purpose: they are not text fields, and
+   stretching one to 100% with 12px of padding pushes its own label into a mid-phrase
+   wrap. Every checkbox in the app was hitting this. They get their own reset below. */
+input:not([type="checkbox"]):not([type="radio"]),
 textarea,
 select {
   width: 100%;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: #fbfaf7;
+  height: 100%;
+  background: transparent;
   color: var(--ink);
   padding: 12px 13px;
   outline: none;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  width: auto;
+  flex: none;
+  margin: 0;
+  accent-color: var(--accent-dark);
+  cursor: pointer;
 }
 
 textarea {
@@ -286,12 +318,7 @@ textarea {
   min-height: 118px;
 }
 
-input:focus,
-textarea:focus,
-select:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(240, 91, 55, 0.14);
-}
+
 
 .wide-field {
   grid-column: span 2;
@@ -369,10 +396,17 @@ select:focus {
 }
 
 .search-box input {
+  height: 100%;
   border: 0;
   padding: 0;
   background: transparent;
   box-shadow: none;
+}
+
+.search-box:focus-within {
+  border-color: #94bafc;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(23, 105, 255, .08);
 }
 
 .filter-scroll {
@@ -605,7 +639,7 @@ select:focus {
   font-weight: 800;
 }
 
-.manage-row > span {
+.manage-row>span {
   color: var(--muted);
   font-size: 12px;
   font-weight: 800;
@@ -740,6 +774,69 @@ footer span {
   font-weight: 800;
 }
 
+/* Footer links under the auth form. Sign-in shows two (forgot password + switch to
+   signup), every other mode shows one, so they sit on a row that stays tidy either way. */
+.auth-switch-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.auth-switch-row .auth-switch {
+  margin-top: 0;
+}
+
+.auth-switch-row:only-child,
+.auth-switch-row:last-child {
+  margin-top: 18px;
+}
+
+/* Previously only defined for the jobs chrome; the reset flow needs it in the default
+   auth-dialog too, for its hint line and its checking/expired states. */
+.auth-dialog .modal-subtitle {
+  margin: -14px 0 22px;
+  color: var(--muted, #767676);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+/* Standalone auth routes — /auth/forgot requests the link, /auth/reset consumes it.
+   Full pages rather than modal steps because the user arrives from an email, with no
+   dialog behind them to return to. Chrome lives in components/auth/AuthPageCard.tsx. */
+.auth-page {
+  display: grid;
+  place-items: center;
+  padding: 64px 20px 96px;
+}
+
+.auth-page-card {
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.08);
+}
+
+/* inline-flex rather than the inherited block box: on these pages .auth-submit is worn by
+   an <a> as well as a <button>, and min-height alone does nothing to an inline anchor. */
+.auth-page-card .auth-submit {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.auth-page-actions {
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+  margin-top: 18px;
+}
+
+.auth-page-actions .auth-switch {
+  margin-top: 0;
+}
+
 .modal-close {
   position: absolute;
   top: 12px;
@@ -854,7 +951,7 @@ footer span {
     height: 58px;
   }
 
-  .manage-row > span {
+  .manage-row>span {
     grid-column: 2 / -1;
   }
 

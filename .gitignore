@@ -3,3 +3,5 @@ node_modules
 .env.local
 .build-deps
 tsconfig.tsbuildinfo
+.tsconfig.cfgcheck.tsbuildinfo
+supabase/.temp

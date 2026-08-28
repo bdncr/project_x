@@ -179,12 +179,6 @@ export function friendlyWorkMode(mode: WorkMode) {
   return mode === "remote" ? "Remote" : mode === "hybrid" ? "Hybrid" : "On-site";
 }
 
-export function relativeDate(value: string) {
-  const elapsed = Math.max(0, Date.now() - new Date(value).getTime());
-  const hours = Math.floor(elapsed / 3600000);
-  if (hours < 1) return "Саяхан";
-  if (hours < 24) return String(hours) + " цагийн өмнө";
-  const days = Math.floor(hours / 24);
-  if (days < 7) return String(days) + " өдрийн өмнө";
-  return String(Math.floor(days / 7)) + " долоо хоногийн өмнө";
-}
+/** Re-exported from lib/format so the project pages can use it without pulling the whole
+ * jobs module into their bundle; the jobs components keep importing it from here. */
+export { relativeDate } from "./format";

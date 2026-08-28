@@ -1,5 +1,19 @@
 export type EmbedKind = "embed" | "prototype" | "3d";
 
+/** "private" never actually goes public (see persist() in components/project/editor/ProjectEditorScreen.tsx) —
+ * password-protected and link-only stay visible-but-Pro-locked in the Settings modal,
+ * matching the reference editor, since neither has anything to connect to on this app's side. */
+export type ProjectVisibility = "everyone" | "private";
+
+export const MAX_TAGS = 10;
+
+export const LICENSE_OPTIONS: { value: string; label: string }[] = [
+  { value: "all_rights_reserved", label: "Бүх эрх хуулиар хамгаалагдсан" },
+  { value: "cc_by", label: "Creative Commons — Attribution" },
+  { value: "cc_by_nc", label: "Creative Commons — Attribution, Non-commercial" },
+  { value: "public_domain", label: "Creative Commons — Public Domain" },
+];
+
 export type ProjectBlock =
   | { id: string; type: "text"; html: string }
   | { id: string; type: "image"; url: string; caption: string }
@@ -81,6 +95,21 @@ export function extractEmbedUrl(pasted: string): string {
   const trimmed = pasted.trim();
   const match = trimmed.match(/src=["']([^"']+)["']/i);
   return match ? match[1] : trimmed;
+}
+
+/** The only value that may ever reach an <iframe src>. Anything that is not an absolute
+ * http(s) URL returns null, because a relative src resolves against the page the iframe sits
+ * on: a half-typed "h" in the embed field becomes /project/h and loads the whole app inside
+ * itself, recursively, on every keystroke. */
+export function safeEmbedUrl(raw: string): string | null {
+  const candidate = extractEmbedUrl(raw);
+  if (!candidate) return null;
+  try {
+    const parsed = new URL(candidate);
+    return parsed.protocol === "https:" || parsed.protocol === "http:" ? parsed.href : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Normalizes a YouTube/Vimeo watch URL into its embeddable form; returns null for anything else. */

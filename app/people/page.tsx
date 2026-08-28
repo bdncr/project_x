@@ -3,14 +3,16 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { SiteHeader } from "../../components/SiteHeader";
 import { SiteFooter } from "../../components/SiteFooter";
-import { AuthDialog, AuthMode } from "../../components/AuthDialog";
+import { AuthDialog, AuthMode } from "../../components/auth/AuthDialog";
 import { Toast } from "../../components/Toast";
-import { Toolbar } from "../../components/Toolbar";
+import { Toolbar } from "../../components/toolbar/Toolbar";
 import { HireBanner } from "../../components/people/HireBanner";
 import { CreatorGrid } from "../../components/people/CreatorGrid";
 import { supabase } from "../../lib/supabase";
+import { runAuthSubmit } from "../../lib/auth-actions";
 import { useAuth } from "../../lib/AuthProvider";
 import { Creator, CREATOR_DIRECTORY, ProfileDirectoryRow, mapProfileRow } from "../../lib/creator-samples";
+import { getCachedCreators, getSharedQuery, setCachedCreators, setSharedQuery } from "../../lib/feed-cache";
 
 type PeopleSortMode = "recommended" | "followers" | "appreciated" | "viewed";
 
@@ -23,10 +25,12 @@ const SORT_OPTIONS: [PeopleSortMode, string][] = [
 
 export default function PeoplePage() {
   const { user, authReady } = useAuth();
-  const [creators, setCreators] = useState<Creator[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [dataMode, setDataMode] = useState<"backend" | "demo">("demo");
-  const [query, setQuery] = useState("");
+  // Seeded from the cache so returning from Төслүүд paints the last grid immediately
+  // instead of dropping back to skeletons while the same rows are fetched again.
+  const [creators, setCreators] = useState<Creator[]>(() => getCachedCreators()?.items ?? []);
+  const [loading, setLoading] = useState(() => !getCachedCreators());
+  const [dataMode, setDataMode] = useState<"backend" | "demo">(() => getCachedCreators()?.dataMode ?? "demo");
+  const [query, setQuery] = useState(getSharedQuery);
   const [sortMode, setSortMode] = useState<PeopleSortMode>("recommended");
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [followedIds, setFollowedIds] = useState<string[]>([]);
@@ -52,10 +56,10 @@ export default function PeoplePage() {
     if (!authReady) return;
 
     async function load() {
-      setLoading(true);
       if (!supabase) {
         setCreators(CREATOR_DIRECTORY);
         setDataMode("demo");
+        setCachedCreators(CREATOR_DIRECTORY, "demo");
         setLoading(false);
         return;
       }
@@ -63,11 +67,14 @@ export default function PeoplePage() {
       if (error || !data || data.length === 0) {
         setCreators(CREATOR_DIRECTORY);
         setDataMode("demo");
+        setCachedCreators(CREATOR_DIRECTORY, "demo");
         setLoading(false);
         return;
       }
-      setCreators((data as ProfileDirectoryRow[]).map(mapProfileRow));
+      const nextCreators = (data as ProfileDirectoryRow[]).map(mapProfileRow);
+      setCreators(nextCreators);
       setDataMode("backend");
+      setCachedCreators(nextCreators, "backend");
       if (user) {
         const { data: follows } = await supabase.from("profile_follows").select("followee_id").eq("follower_id", user.id);
         setFollowedIds((follows ?? []).map((row) => row.followee_id));
@@ -117,11 +124,10 @@ export default function PeoplePage() {
   };
 
   const submitAuth = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault(); if (!supabase) return; setAuthBusy(true);
-    const response = authMode === "signin" ? await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword }) : await supabase.auth.signUp({ email: authEmail, password: authPassword, options: { data: { display_name: displayName.trim() } } });
-    setAuthBusy(false); if (response.error) return notify(response.error.message);
-    if (authMode === "signup" && !response.data.session) notify("Баталгаажуулах имэйлээ шалгаад нэвтэрнэ үү."); else notify(authMode === "signin" ? "Амжилттай нэвтэрлээ." : "Бүртгэл амжилттай үүслээ.");
-    setAuthOpen(false); setAuthPassword("");
+    event.preventDefault(); setAuthBusy(true);
+    const result = await runAuthSubmit({ mode: authMode, email: authEmail, password: authPassword, displayName });
+    setAuthBusy(false); notify(result.message);
+    if (result.close) { setAuthOpen(false); setAuthPassword(""); }
   };
 
   return <main>
@@ -129,7 +135,7 @@ export default function PeoplePage() {
     <section id="people" className="explore-section people-section">
       <Toolbar<PeopleSortMode>
         activeKind="people"
-        query={query} onQueryChange={setQuery} searchPlaceholder="Нэр, ур чадвараар хайх..."
+        query={query} onQueryChange={(value) => { setQuery(value); setSharedQuery(value); }} searchPlaceholder="Нэр, ур чадвараар хайх..."
         sortMode={sortMode} onSortModeChange={(value) => { setSortMode(value); setSortMenuOpen(false); }}
         sortMenuOpen={sortMenuOpen} onToggleSortMenu={() => setSortMenuOpen((open) => !open)}
         sortOptions={SORT_OPTIONS}

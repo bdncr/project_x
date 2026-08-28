@@ -1,4 +1,4 @@
-import type { ProjectBlock } from "./project-editor";
+import type { ProjectBlock, ProjectVisibility } from "./project-editor";
 
 export type ContentStatus = "published" | "draft";
 
@@ -23,6 +23,13 @@ export type ContentItem = {
   /** An optional call-to-action button set from the editor's "Захиалгат товч" panel. */
   customButtonLabel?: string;
   customButtonUrl?: string;
+  /** Settings-modal fields (see components/project/editor/SettingsModal.tsx). All optional
+   * so the seed/demo dataset above doesn't need updating. */
+  tags?: string[];
+  visibility?: ProjectVisibility;
+  isMature?: boolean;
+  commentsDisabled?: boolean;
+  license?: string;
 };
 
 function sample(
@@ -117,6 +124,28 @@ export function loadLocalProjects(): ContentItem[] {
 
 export function addLocalProject(item: ContentItem) {
   window.localStorage.setItem(LOCAL_PROJECTS_KEY, JSON.stringify([item, ...loadLocalProjects()]));
+}
+
+/** Rewrites one locally-created project in place, keeping its position in the list so the
+ * gallery order does not jump when the author edits an existing piece. Returns false when
+ * the id belongs to the read-only seed gallery rather than a local draft. */
+export function updateLocalProject(id: string, patch: Partial<ContentItem>): boolean {
+  const all = loadLocalProjects();
+  const index = all.findIndex((project) => project.id === id);
+  if (index === -1) return false;
+  all[index] = { ...all[index], ...patch, id };
+  window.localStorage.setItem(LOCAL_PROJECTS_KEY, JSON.stringify(all));
+  return true;
+}
+
+/** Drops one locally-created project. Returns false for an id that is not a local draft —
+ * the seed gallery is read-only. */
+export function removeLocalProject(id: string): boolean {
+  const all = loadLocalProjects();
+  const next = all.filter((project) => project.id !== id);
+  if (next.length === all.length) return false;
+  window.localStorage.setItem(LOCAL_PROJECTS_KEY, JSON.stringify(next));
+  return true;
 }
 
 /** All projects available in demo mode: locally-created projects first, then the seed gallery. */

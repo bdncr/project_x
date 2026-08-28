@@ -30,7 +30,7 @@ export function AppreciateFooter({ item, initial, commentCount, onToggleLike, fo
     </div>
 
     <div className="case-divider dark" />
-
+    
     <div className="case-owner-card">
       <span className="account-avatar large">{initial}</span>
       <div><strong>{item.creator}</strong><span>{item.role}</span></div>

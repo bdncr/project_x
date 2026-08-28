@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import type { User } from "@supabase/supabase-js";
 import { SiteHeader } from "../../components/SiteHeader";
-import { AuthDialog, AuthMode } from "../../components/AuthDialog";
+import { AuthDialog, AuthMode } from "../../components/auth/AuthDialog";
 import { Toast } from "../../components/Toast";
 import { JobsTabs, JobsTab } from "../../components/jobs/JobsTabs";
 import { JobsSidebar } from "../../components/jobs/JobsSidebar";
@@ -12,6 +12,7 @@ import { JobDetailPanel } from "../../components/jobs/JobDetailPanel";
 import { ApplicationPanel } from "../../components/jobs/ApplicationPanel";
 import { ChoiceModal } from "../../components/jobs/ChoiceModal";
 import { supabase } from "../../lib/supabase";
+import { runAuthSubmit } from "../../lib/auth-actions";
 import { useAuth } from "../../lib/AuthProvider";
 import { Job, WorkMode } from "../../lib/job-samples";
 import { DatabaseJobRow, loadDemoJobs, loadDemoJobState, mapJob, persistDemoJobState } from "../../lib/jobs-data";
@@ -184,23 +185,11 @@ export default function JobsPage() {
 
   async function submitAuth(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!supabase) {
-      setAuthOpen(false);
-      notify("Demo горимд нэвтрэх шаардлагагүй.");
-      return;
-    }
     setAuthBusy(true);
-    const result = authMode === "signin"
-      ? await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword })
-      : await supabase.auth.signUp({ email: authEmail, password: authPassword, options: { data: { display_name: authName.trim() } } });
+    const result = await runAuthSubmit({ mode: authMode, email: authEmail, password: authPassword, displayName: authName });
     setAuthBusy(false);
-    if (result.error) {
-      notify(result.error.message);
-      return;
-    }
-    setAuthPassword("");
-    setAuthOpen(false);
-    notify(authMode === "signup" && !result.data.session ? "Баталгаажуулах имэйлээ шалгаад нэвтэрнэ үү." : "Амжилттай нэвтэрлээ.");
+    notify(result.message);
+    if (result.close) { setAuthOpen(false); setAuthPassword(""); }
   }
 
   return <main className="jobs-page">
@@ -237,7 +226,6 @@ export default function JobsPage() {
     {choiceOpen && <ChoiceModal onClose={() => setChoiceOpen(false)} />}
 
     {authOpen && <AuthDialog
-      variant="jobs"
       mode={authMode} onModeChange={setAuthMode}
       name={authName} onNameChange={setAuthName}
       email={authEmail} onEmailChange={setAuthEmail}

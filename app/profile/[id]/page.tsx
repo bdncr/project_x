@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { SiteHeader } from "../../../components/SiteHeader";
 import { SiteFooter } from "../../../components/SiteFooter";
-import { AuthDialog, AuthMode } from "../../../components/AuthDialog";
+import { AuthDialog, AuthMode } from "../../../components/auth/AuthDialog";
 import { Toast } from "../../../components/Toast";
 import { Icon } from "../../../components/Icon";
 import { ProfileCover } from "../../../components/profile/ProfileCover";
@@ -15,6 +15,7 @@ import { ProfileWorkGrid } from "../../../components/profile/ProfileWorkGrid";
 import { ProfileServices } from "../../../components/profile/ProfileServices";
 import { EditProfileDialog } from "../../../components/profile/EditProfileDialog";
 import { supabase } from "../../../lib/supabase";
+import { runAuthSubmit } from "../../../lib/auth-actions";
 import { useAuth } from "../../../lib/AuthProvider";
 import { Creator, CREATOR_DIRECTORY, mapProfileRow } from "../../../lib/creator-samples";
 import { ProfileWork, ProjectRow, demoWorksForCreator, mapProjectRow } from "../../../lib/profile-work";
@@ -186,11 +187,10 @@ export default function ProfilePage() {
   const addCoverSoon = () => notify("Ковер зураг оруулах боломж тун удахгүй нэмэгдэнэ.");
 
   const submitAuth = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault(); if (!supabase) return; setAuthBusy(true);
-    const response = authMode === "signin" ? await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword }) : await supabase.auth.signUp({ email: authEmail, password: authPassword, options: { data: { display_name: displayName.trim() } } });
-    setAuthBusy(false); if (response.error) return notify(response.error.message);
-    if (authMode === "signup" && !response.data.session) notify("Баталгаажуулах имэйлээ шалгаад нэвтэрнэ үү."); else notify(authMode === "signin" ? "Амжилттай нэвтэрлээ." : "Бүртгэл амжилттай үүслээ.");
-    setAuthOpen(false); setAuthPassword("");
+    event.preventDefault(); setAuthBusy(true);
+    const result = await runAuthSubmit({ mode: authMode, email: authEmail, password: authPassword, displayName });
+    setAuthBusy(false); notify(result.message);
+    if (result.close) { setAuthOpen(false); setAuthPassword(""); }
   };
 
   if (!loading && notFound) return <main className="profile-page">

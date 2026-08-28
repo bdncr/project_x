@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Icon } from "../Icon";
 import type { ContentItem } from "../../lib/project-samples";
+import { creatorProfileId } from "../../lib/creator-samples";
 import { compactNumber } from "../../lib/format";
 
 type ContentCardProps = {
@@ -12,24 +13,58 @@ type ContentCardProps = {
   onDelete: (item: ContentItem) => void;
 };
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Backend rows carry the owner's real profile id; demo rows are stamped "seed" and have to
+ * be matched back by name. Either way the result is whatever /profile/[id] can resolve. */
+function profileIdFor(item: ContentItem): string | null {
+  return UUID_RE.test(item.ownerId) ? item.ownerId : creatorProfileId(item.creator);
+}
+
 export function ContentCard({ item, isOwner, onToggleLike, onToggleSave, onEdit, onDelete }: ContentCardProps) {
+  const profileId = profileIdFor(item);
+  const creator = <>
+    <span className="account-avatar card-avatar">{item.creator.slice(0, 1).toUpperCase()}</span>
+    <span>{item.creator}</span>
+  </>;
+
   return <article className="content-card">
-    <Link href={`/project/${item.id}`} className="image-button">
-      <img src={item.coverUrl} alt="" />
-      <span className={item.status === "published" ? "status published" : "status"}>{item.status === "published" ? "Нийтэлсэн" : "Ноорог"}</span>
-    </Link>
+    <div className="card-media">
+      <Link href={`/project/${item.id}`} className="image-button">
+        <img src={item.coverUrl} alt="" />
+      </Link>
+      {/* Sibling of the cover link rather than a child of it: a <button> nested inside an
+          <a> is invalid, and the action would also navigate. It sits in the cover's top-right
+          corner and fades in with the rest of the hover layer. Saving your own work is
+          pointless, so that corner offers Edit instead when you own the piece. */}
+      {isOwner
+        ? <button className="card-quick-action icon-action" title="Засах" onClick={() => onEdit(item)}>
+            <Icon name="edit" />
+          </button>
+        : <button
+            className={item.saved ? "card-quick-action icon-action active" : "card-quick-action icon-action"}
+            title="Хадгалах"
+            onClick={() => onToggleSave(item)}
+          >
+            <Icon name="save" />
+          </button>}
+      {/* The overlay ignores pointer events so a click anywhere on it still falls through
+          to the cover link underneath. */}
+      <div className="card-hover">
+        <p>{item.category}</p>
+        <h3>{item.title}</h3>
+      </div>
+    </div>
     <div className="card-body">
-      <div className="card-topline"><p>{item.category}</p><button className={item.saved ? "icon-action active" : "icon-action"} onClick={() => onToggleSave(item)}><Icon name="save" /></button></div>
-      <h3>{item.title}</h3>
-      <span>{item.creator} · {item.role}</span>
+      
+      {profileId
+        ? <Link href={`/profile/${encodeURIComponent(profileId)}`} className="card-creator">{creator}</Link>
+        : <span className="card-creator">{creator}</span>}
       <div className="card-stats">
         <button className={item.liked ? "liked" : ""} onClick={() => onToggleLike(item)}><Icon name="heart" /> {compactNumber(item.likes)}</button>
         <span><Icon name="eye" /> {compactNumber(item.views)}</span>
       </div>
-      {isOwner && <div className="card-actions">
-        <button onClick={() => onEdit(item)}><Icon name="edit" /> Засах</button>
-        <button className="danger-button" onClick={() => onDelete(item)}><Icon name="trash" /> Устгах</button>
-      </div>}
+    
     </div>
   </article>;
 }

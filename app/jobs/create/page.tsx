@@ -6,10 +6,11 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Icon } from "../../../components/Icon";
 import { SiteHeader } from "../../../components/SiteHeader";
-import { AuthDialog, AuthMode } from "../../../components/AuthDialog";
+import { AuthDialog, AuthMode } from "../../../components/auth/AuthDialog";
 import { Toast } from "../../../components/Toast";
 import { PostJobForm } from "../../../components/jobs/PostJobForm";
 import { supabase } from "../../../lib/supabase";
+import { runAuthSubmit } from "../../../lib/auth-actions";
 import { useAuth } from "../../../lib/AuthProvider";
 import { JobForm, emptyJobForm, addLocalJob, buildJobInsertPayload, buildLocalJob, randomCompanyColor } from "../../../lib/jobs-data";
 
@@ -71,26 +72,20 @@ export default function CreateJobPage() {
 
   async function submitAuth(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!supabase) return;
     setAuthBusy(true);
-    const response = authMode === "signin"
-      ? await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword })
-      : await supabase.auth.signUp({ email: authEmail, password: authPassword, options: { data: { display_name: authName.trim() } } });
+    const result = await runAuthSubmit({ mode: authMode, email: authEmail, password: authPassword, displayName: authName });
     setAuthBusy(false);
-    if (response.error) { notify(response.error.message); return; }
-    if (authMode === "signup" && !response.data.session) { notify("Баталгаажуулах имэйлээ шалгаад нэвтэрнэ үү."); return; }
-    setAuthOpen(false);
-    setAuthPassword("");
-    notify(authMode === "signin" ? "Амжилттай нэвтэрлээ." : "Бүртгэл амжилттай үүслээ.");
+    notify(result.message);
+    if (result.close) { setAuthOpen(false); setAuthPassword(""); }
   }
 
   const needsAuth = !!supabase && authReady && !user;
 
-  return <main className="jobs-page">
+  return <main className="jobs-page jobs-page-scroll">
     <SiteHeader activePage="jobs" onLogin={() => setAuthOpen(true)} />
     <div className="job-form-page">
       <div className="job-form-shell">
-        <Link className="job-form-back" href="/jobs"><Icon name="arrow" />Ажлын жагсаалт руу буцах</Link>
+     
         {!authReady ? null : needsAuth ? <section className="jobs-modal post-modal job-form-card auth-required-card">
           <p className="modal-kicker">Ажлын зар</p>
           <h2>Эхлээд нэвтэрнэ үү</h2>
@@ -100,7 +95,6 @@ export default function CreateJobPage() {
       </div>
     </div>
     {authOpen && <AuthDialog
-      variant="jobs"
       mode={authMode} onModeChange={setAuthMode}
       name={authName} onNameChange={setAuthName}
       email={authEmail} onEmailChange={setAuthEmail}

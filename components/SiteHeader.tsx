@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Icon } from "./Icon";
 import { useAuth } from "../lib/AuthProvider";
+import { MessagesMenu } from "./header/MessagesMenu";
 
 type SiteHeaderProps = {
   activePage: "explore" | "jobs" | "people";
@@ -45,7 +46,7 @@ export function SiteHeader({ activePage, onLogin, onSignOut }: SiteHeaderProps) 
       <div className="header-hover-menu share-hover" onMouseEnter={hoverOpen("share")} onMouseLeave={hoverClose("share")}>
         <button type="button" className="share-work" onClick={() => toggleMenu("share")} aria-expanded={openMenu === "share"}>Бүтээл нэмэх</button>
         {openMenu === "share" && <div className="nav-menu share-menu">
-          <Link href="/project/create" onClick={closeMenu} className="share-menu-item">
+          <Link href="/project/new" onClick={closeMenu} className="share-menu-item">
             <span className="share-menu-icon"><Icon name="edit" /></span>
             <span><strong>Төсөл</strong><small>Дэлгэрэнгүй бүтээлээ нийтэл</small></span>
             <Icon name="arrow" />
@@ -59,13 +60,14 @@ export function SiteHeader({ activePage, onLogin, onSignOut }: SiteHeaderProps) 
       </div>
 
       {!authReady ? <span className="skeleton auth-skeleton" aria-hidden="true" /> : user ? <>
-        <div className="header-hover-menu" onMouseEnter={hoverOpen("mail")} onMouseLeave={hoverClose("mail")}>
-          <button className="header-icon" type="button" aria-label="Мессеж" aria-expanded={openMenu === "mail"} onClick={() => toggleMenu("mail")}><Icon name="mail" /></button>
-          {openMenu === "mail" && <div className="header-menu-panel">
-            <div className="header-menu-head"><h3>Зурвасууд</h3></div>
-            <div className="header-menu-empty"><Icon name="mail" /><p>Танд одоогоор зурвас алга байна.</p></div>
-          </div>}
-        </div>
+        <MessagesMenu
+          userId={user.id}
+          open={openMenu === "mail"}
+          onToggle={() => toggleMenu("mail")}
+          onHoverOpen={hoverOpen("mail")}
+          onHoverClose={hoverClose("mail")}
+          onClose={closeMenu}
+        />
         <div className="header-hover-menu" onMouseEnter={hoverOpen("bell")} onMouseLeave={hoverClose("bell")}>
           <button className="header-icon" type="button" aria-label="Мэдэгдэл" aria-expanded={openMenu === "bell"} onClick={() => toggleMenu("bell")}><Icon name="bell" /></button>
           {openMenu === "bell" && <div className="header-menu-panel">
@@ -83,6 +85,7 @@ export function SiteHeader({ activePage, onLogin, onSignOut }: SiteHeaderProps) 
             </div>
             <Link href={`/profile/${user.id}`} className="account-panel-link" onClick={closeMenu}><Icon name="user" />Профайл</Link>
             <Link href={`/profile/${user.id}`} className="account-panel-link" onClick={closeMenu}><Icon name="briefcase" />Миний бүтээл</Link>
+            <Link href="/settings" className="account-panel-link" onClick={closeMenu}><Icon name="settings" />Тохиргоо</Link>
             <button type="button" className="account-panel-link danger" onClick={() => void handleSignOut()}><Icon name="logout" />Гарах</button>
           </div>}
         </div>

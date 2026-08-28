@@ -2,10 +2,9 @@
 
 import type { FormEvent } from "react";
 import { Icon } from "../Icon";
+import { SELECTABLE_EMPLOYMENT_TAGS } from "../../lib/creator-samples";
 
-/** The one status pill a creator can't self-assign — "Онцлох" is awarded by the
- * platform (top-follower creator), not chosen, so it's excluded from this list. */
-const STATUS_OPTIONS = ["Freelance", "Бүтэн цаг", "Үйлчилгээ"];
+
 
 type EditProfileDialogProps = {
   headline: string;
@@ -31,7 +30,7 @@ export function EditProfileDialog({ headline, onHeadlineChange, location, onLoca
         <div className="edit-profile-tags">
           <span>Ажлын төлөв</span>
           <div className="edit-profile-tag-options">
-            {STATUS_OPTIONS.map((tag) => <label key={tag} className="edit-profile-tag-option">
+            {SELECTABLE_EMPLOYMENT_TAGS.map((tag) => <label key={tag} className="edit-profile-tag-option">
               <input type="checkbox" checked={employmentTags.includes(tag)} onChange={() => onToggleTag(tag)} />
               {tag}
             </label>)}

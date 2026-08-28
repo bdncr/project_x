@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Icon } from "./Icon";
+import { Icon } from "../Icon";
+import { SearchBox } from "./SearchBox";
 
 type ContentKind = "projects" | "people";
 
@@ -23,7 +24,7 @@ export function Toolbar<T extends string>({ activeKind, query, onQueryChange, se
 
   return <div className="toolbar">
     <button className="filter-trigger"><Icon name="filter" /> Шүүлтүүр</button>
-    <label className="search-box"><Icon name="search" /><input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder={searchPlaceholder} /></label>
+    <SearchBox query={query} onQueryChange={onQueryChange} placeholder={searchPlaceholder} />
     <div className="content-kind">
       {activeKind === "projects" ? <button className="active">Төслүүд</button> : <Link href="/">Төслүүд</Link>}
       {activeKind === "people" ? <button className="active">Хүмүүс</button> : <Link href="/people">Хүмүүс</Link>}

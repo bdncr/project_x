@@ -5,16 +5,32 @@
 
 .editor-page { min-height: 100dvh; background: #f5f6f8; }
 
-.editor-topbar { position: sticky; top: 0; z-index: 40; height: 58px; display: flex; align-items: center; gap: 16px; padding: 0 20px; background: #fff; border-bottom: 1px solid #ececec; }
+/* 55px is the reference editor's own EditorNav height. */
+.editor-topbar { position: sticky; top: 0; z-index: 40; height: 55px; display: flex; align-items: center; gap: 16px; padding: 0 20px; background: #fff; border-bottom: 1px solid #ececec; }
 .editor-topbar-back { width: 34px; height: 34px; flex: 0 0 auto; display: grid; place-items: center; border: 1px solid #e4e4e4; border-radius: 50%; color: #333; }
 .editor-topbar-back:hover { border-color: #c7d9fd; color: #1769ff; }
 .editor-topbar-back svg { width: 16px; transform: scaleX(-1); }
 .editor-topbar-actions { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.editor-preview-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 14px; border: 0; border-radius: 6px; background: transparent; color: #555; font-size: 12px; font-weight: 750; }
+.editor-preview-btn:hover { color: #1769ff; }
+.editor-preview-btn svg { width: 15px; }
 .editor-draft-btn { min-height: 36px; padding: 0 16px; border: 1px solid #dfdfdf; border-radius: 6px; background: #fff; color: #767676; font-size: 12px; font-weight: 800; }
 .editor-draft-btn:hover:not(:disabled) { border-color: #c7d9fd; color: #1769ff; }
 .editor-publish-btn { min-height: 36px; padding: 0 18px; border: 1px solid #1769ff; border-radius: 6px; background: #1769ff; color: #fff; font-size: 12px; font-weight: 800; }
 .editor-publish-btn:hover:not(:disabled) { background: #0758e8; }
 .editor-draft-btn:disabled, .editor-publish-btn:disabled { opacity: .6; cursor: wait; }
+
+/* Canvas header: title is edited inline (matches the reference's #project-title —
+   click-to-edit right on the canvas), everything else lives behind the Settings modal. */
+.editor-canvas-head { display: flex; align-items: flex-start; gap: 14px; }
+.editor-title-input { flex: 1; min-width: 0; padding: 8px 2px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: #191919; font-size: 26px; font-weight: 800; }
+.editor-title-input::placeholder { color: #c2c2c2; }
+.editor-title-input:hover { border-bottom-color: #e7e7e7; }
+.editor-title-input:focus { outline: 0; border-bottom-color: #1769ff; }
+.editor-settings-trigger { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; margin-top: 6px; padding: 0 14px; border: 1px solid #e0e2e6; border-radius: 20px; background: #fff; color: #292929; font-size: 12px; font-weight: 750; }
+.editor-settings-trigger:hover { border-color: #c7d9fd; color: #1769ff; }
+.editor-settings-trigger svg { width: 13px; }
+.editor-canvas-error { margin: -4px 0 0; }
 
 .editor-body { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; max-width: 1400px; margin: 0 auto; padding: 24px 20px 80px; align-items: start; }
 .editor-canvas { min-width: 0; display: grid; gap: 18px; }
@@ -37,11 +53,11 @@
 .editor-block { border: 1px solid #e7e7e7; border-radius: 10px; background: #fff; overflow: hidden; }
 .editor-block-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid #f0f0f0; background: #fafbfc; }
 .editor-block-head > span { color: #555; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .3px; }
-.editor-block-actions { display: flex; gap: 4px; }
-.editor-block-actions button { width: 26px; height: 26px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 6px; background: transparent; color: #777; }
-.editor-block-actions button:hover:not(:disabled) { background: #eef2f7; color: #1769ff; }
+.editor-block-actions { display: flex; gap: 6px; }
+.editor-block-actions button { width: 28px; height: 28px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: transparent; color: #777; transition: background-color .12s ease, color .12s ease; }
+.editor-block-actions button:hover:not(:disabled) { background: #1769ff; color: #fff; }
 .editor-block-actions button:disabled { opacity: .3; cursor: default; }
-.editor-block-actions button.editor-block-danger:hover { background: #fdecec; color: #c0392b; }
+.editor-block-actions button.editor-block-danger:hover { background: #d00d00; color: #fff; }
 .editor-block-actions svg { width: 14px; }
 
 .block-field-group { display: grid; gap: 12px; padding: 16px; }
@@ -72,15 +88,11 @@
 .text-block-content { min-height: 120px; padding: 14px 16px; color: #292929; font-size: 13px; line-height: 1.7; outline: 0; }
 .text-block-content:empty::before { content: attr(data-placeholder); color: #aaa; }
 
-.mode-toggle { display: flex; gap: 4px; width: fit-content; padding: 3px; border: 1px solid #e7e7e7; border-radius: 20px; background: #fff; }
-.mode-toggle button { min-height: 34px; padding: 0 16px; border: 0; border-radius: 17px; background: transparent; color: #666; font-size: 12px; font-weight: 750; }
-.mode-toggle button.active { background: #1769ff; color: #fff; }
 
 /* Sidebar */
 .editor-sidebar { display: grid; gap: 14px; position: sticky; top: 74px; }
 .sidebar-card { padding: 16px; border: 1px solid #e7e7e7; border-radius: 10px; background: #fff; }
 .sidebar-heading { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; color: #8a8a8a; font-size: 10px; font-weight: 800; letter-spacing: .3px; text-transform: uppercase; }
-.sidebar-hint { margin: 0; color: #8a8a8a; font-size: 11px; font-weight: 600; line-height: 1.5; }
 
 .sidebar-add-content { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
 .sidebar-content-item { display: flex; align-items: center; gap: 8px; padding: 8px; border: 0; border-radius: 6px; background: transparent; color: #333; font-size: 10px; font-weight: 700; text-align: left; }
@@ -134,6 +146,99 @@
 .case-custom-btn:hover { background: #0758e8; }
 .case-custom-btn svg { width: 14px; }
 
+/* Settings modal — the reference editor's two-column SettingsModal-*, reusing the
+   .modal-backdrop/.auth-dialog shell (see base-theme.css) widened via .settings-modal. */
+/* .settings-modal-scroll carries the scrolling and padding; the action bar below it
+   (.settings-modal-actions) stays pinned so Save/Publish are always reachable, matching
+   the reference's fixed SettingsModal-actionButtons-xH7 footer. */
+.settings-modal { width: min(880px, 100%); max-height: 88vh; padding: 0; display: flex; flex-direction: column; text-align: left; }
+.settings-modal-scroll { padding: 30px 30px 4px; overflow-y: auto; }
+.settings-modal h2 { margin: 4px 0 20px; font-size: 24px; }
+.settings-modal-body { display: grid; grid-template-columns: 220px 1fr; gap: 28px; }
+
+.settings-required { color: #8a8a8a; font-size: 10px; font-weight: 650; }
+.settings-pro-badge { display: inline-flex; align-items: center; padding: 1px 6px; border-radius: 4px; background: linear-gradient(45deg, #0188fd, #003bff); color: #fff; font-size: 8px; font-weight: 800; letter-spacing: .3px; vertical-align: middle; }
+
+.settings-cover-col h3 { margin: 0 0 10px; color: #191919; font-size: 12px; font-weight: 800; }
+.settings-cover-box { aspect-ratio: 304 / 240; border: 1px dashed #c9cdd3; border-radius: 8px; overflow: hidden; background: #fafbfc; }
+.settings-cover-box img { width: 100%; height: 100%; display: block; object-fit: cover; }
+.settings-cover-empty { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 12px; color: #9aa1ab; text-align: center; }
+.settings-cover-empty svg { width: 26px; }
+.settings-cover-empty span { font-size: 11px; font-weight: 650; line-height: 1.5; }
+.settings-cover-col input { width: 100%; margin-top: 10px; padding: 8px 9px; border: 1px solid #e0e2e6; border-radius: 5px; font-size: 11px; font-weight: 600; }
+.settings-cover-col input:focus { outline: 0; border-color: #8db8ff; box-shadow: 0 0 0 3px rgba(23, 105, 255, .09); }
+.settings-cover-hint { margin: 8px 0 0; color: #9a9a9a; font-size: 10px; font-weight: 600; line-height: 1.5; }
+
+.settings-fields-col { display: grid; gap: 18px; align-content: start; }
+.settings-section-title { margin: 0; color: #8a8a8a; font-size: 10px; font-weight: 800; letter-spacing: .3px; text-transform: uppercase; }
+.settings-field { display: grid; gap: 8px; color: #333; font-size: 11px; font-weight: 800; }
+.settings-field > span > small { margin-left: 4px; color: #9a9a9a; font-weight: 600; }
+.settings-field input[type="text"], .settings-field input:not([type]), .settings-field select, .settings-field textarea { padding: 9px 10px; border: 1px solid #e0e2e6; border-radius: 5px; outline: 0; background: #fff; color: #292929; font-size: 12px; font-weight: 600; resize: vertical; }
+.settings-field input:focus, .settings-field select:focus, .settings-field textarea:focus { border-color: #8db8ff; box-shadow: 0 0 0 3px rgba(23, 105, 255, .09); }
+
+.settings-chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.settings-chip { padding: 7px 14px; border: 1px solid #e2e2e2; border-radius: 16px; background: #fff; color: #444; font-size: 11px; font-weight: 700; }
+.settings-chip:hover { border-color: #c7d9fd; color: #1769ff; }
+.settings-chip.active { border-color: #1769ff; background: #1769ff; color: #fff; }
+
+.settings-tag-input { display: flex; gap: 8px; }
+.settings-tag-input input { flex: 1; padding: 9px 10px; border: 1px solid #e0e2e6; border-radius: 5px; outline: 0; font-size: 12px; font-weight: 600; }
+.settings-tag-input input:focus { border-color: #8db8ff; box-shadow: 0 0 0 3px rgba(23, 105, 255, .09); }
+.settings-tag-input button { width: 36px; flex: 0 0 auto; display: grid; place-items: center; border: 1px solid #1769ff; border-radius: 5px; background: #1769ff; color: #fff; }
+.settings-tag-input button:disabled { opacity: .5; cursor: default; }
+.settings-tag-input button svg { width: 14px; }
+.settings-tag-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.settings-tag-chip { display: inline-flex; align-items: center; gap: 5px; padding: 4px 4px 4px 10px; border-radius: 12px; background: #eef2f7; color: #333; font-size: 11px; font-weight: 700; }
+.settings-tag-chip button { width: 18px; height: 18px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: transparent; color: #888; }
+.settings-tag-chip button:hover { background: #dbe1e8; color: #333; }
+.settings-tag-chip button svg { width: 9px; }
+
+.settings-visibility-options { display: grid; gap: 8px; }
+.settings-visibility-option { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid #edf0f3; border-radius: 8px; font-weight: 400; }
+.settings-visibility-option:has(input:checked) { border-color: #1769ff; background: #f5f8ff; }
+.settings-visibility-option input { margin-top: 3px; accent-color: #1769ff; }
+.settings-visibility-option strong { display: block; color: #191919; font-size: 12px; font-weight: 750; }
+.settings-visibility-option span { display: block; margin-top: 2px; color: #8a8a8a; font-size: 10px; font-weight: 600; line-height: 1.4; }
+.settings-visibility-option.disabled { color: #b7b7b7; cursor: default; }
+.settings-visibility-option.disabled strong { color: #b7b7b7; }
+
+.settings-checkbox-row { display: flex; align-items: flex-start; gap: 9px; color: #292929; font-size: 12px; font-weight: 650; }
+.settings-checkbox-row input { margin-top: 2px; accent-color: #1769ff; }
+
+.settings-accordion { border-top: 1px solid #f0f0f0; padding-top: 16px; }
+.settings-accordion-trigger { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 0; border: 0; background: transparent; color: #191919; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .3px; }
+.settings-accordion-chevron { display: grid; place-items: center; color: #8a8a8a; transition: transform .15s ease; }
+.settings-accordion-chevron svg { width: 11px; }
+.settings-accordion-chevron.open { transform: rotate(180deg); }
+.settings-accordion-body { display: grid; gap: 16px; margin-top: 16px; }
+.settings-schedule-row { color: #b0b0b0; padding: 0; border: 0; }
+.settings-schedule-row svg { width: 15px; margin-top: 1px; flex: 0 0 auto; }
+.settings-schedule-row strong { display: block; color: #9a9a9a; font-size: 11px; font-weight: 750; }
+.settings-schedule-row span { display: block; margin-top: 2px; color: #c0c0c0; font-size: 9px; font-weight: 600; line-height: 1.4; }
+
+.settings-modal-actions { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 20px 30px; border-top: 1px solid #f0f0f0; }
+.settings-modal-actions-right { display: flex; gap: 10px; }
+.settings-cancel { min-height: 36px; padding: 0 16px; border: 0; border-radius: 6px; background: transparent; color: #767676; font-size: 12px; font-weight: 800; }
+.settings-cancel:hover { color: #191919; }
+
+/* Preview overlay — read-only, client-side "what will this look like" (matches
+   EditorNav-previewBtn-W6d). Uses .case-body-blocks/BlockRenderer below unchanged. */
+.preview-overlay { position: fixed; inset: 0; z-index: 55; background: #fff; overflow-y: auto; }
+.preview-close { position: sticky; top: 0; z-index: 2; display: inline-flex; align-items: center; gap: 7px; min-height: 44px; margin: 14px 0 0 14px; padding: 0 16px; border: 1px solid #e4e4e4; border-radius: 22px; background: rgba(255, 255, 255, .96); backdrop-filter: blur(6px); color: #333; font-size: 12px; font-weight: 750; }
+.preview-close:hover { border-color: #c7d9fd; color: #1769ff; }
+.preview-close svg { width: 13px; }
+.preview-hero { margin-top: -44px; aspect-ratio: 16 / 8; overflow: hidden; background: #111; }
+.preview-hero img { width: 100%; height: 100%; display: block; object-fit: cover; }
+.preview-body { max-width: 800px; margin: 0 auto; padding: 40px 20px 80px; }
+.preview-kicker { margin: 0; color: #8a8a8a; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; }
+.preview-body h1 { margin: 8px 0 16px; color: #191919; font-size: 32px; font-weight: 800; line-height: 1.2; }
+.preview-description { margin: 0 0 20px; color: #4b4b4b; font-size: 15px; line-height: 1.7; }
+.preview-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px; }
+.preview-tags span { padding: 5px 12px; border-radius: 14px; background: #eef2f7; color: #555; font-size: 11px; font-weight: 700; }
+.preview-body .case-body-blocks { padding: 0; }
+.preview-body .block-render-text { color: #333; }
+.preview-body .block-render-text a { color: #1769ff; }
+
 @media (max-width: 1050px) {
   .editor-body { grid-template-columns: 1fr; }
   .editor-sidebar { position: static; }
@@ -143,4 +248,15 @@
   .block-picker-item { width: 84px; }
   .block-picker-icon { width: 46px; height: 46px; }
   .editor-body { padding: 18px 14px 60px; }
+  .editor-canvas-head { flex-direction: column; align-items: stretch; gap: 10px; }
+  .editor-title-input { font-size: 21px; }
+  .settings-modal-body { grid-template-columns: 1fr; }
+  .settings-modal { padding: 20px; }
+  .settings-modal-actions { flex-direction: column-reverse; align-items: stretch; gap: 10px; }
+  .settings-modal-actions-right { justify-content: stretch; }
+  .settings-modal-actions-right button { flex: 1; }
 }
+
+/* Shown in the canvas while an existing project is being fetched for editing, so the empty
+   block picker does not flash before the saved blocks arrive. */
+.editor-loading { display: grid; gap: 14px; padding: 8px 0 0; }

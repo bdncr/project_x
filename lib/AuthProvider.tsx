@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
@@ -18,6 +19,7 @@ const AuthContext = createContext<AuthContextValue>({
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(!supabase);
 
@@ -30,7 +32,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(sessionUser);
       setAuthReady(true);
     });
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      // A recovery link signs the user in wherever it lands — which is the site root
+      // whenever Supabase falls back to the Site URL (an emailed redirect_to that isn't
+      // on the dashboard's Redirect URLs allowlist is ignored). Without this the user is
+      // silently logged in and never shown the form that actually changes the password.
+      if (event === "PASSWORD_RECOVERY") router.push("/auth/reset");
       const nextUser = session?.user ?? null;
       const nextUserId = nextUser?.id ?? null;
       if (nextUserId === knownUserId) return;
@@ -39,7 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAuthReady(true);
     });
     return () => listener.subscription.unsubscribe();
-  }, []);
+  }, [router]);
 
   async function signOut() {
     if (!supabase) return;

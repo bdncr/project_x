@@ -27,13 +27,18 @@ function slugify(name: string) {
   return name.toLowerCase().replace(/[^a-zа-яөүёэ0-9]+/gi, "-").replace(/^-+|-+$/g, "");
 }
 
-/** Fills a 4-thumbnail strip from the creator's own project covers, padding with
- * differently-cropped variants of their first cover when they have fewer than 4 projects. */
-function creatorThumbnails(projects: ContentItem[]): string[] {
-  const covers = projects.map((project) => project.coverUrl);
+/** Fills a 4-thumbnail strip from a creator's own project covers, padding with
+ * differently-cropped variants of their first cover when they have fewer than 4 projects.
+ * Shared by both data modes so a backend creator's card looks the same as a demo one —
+ * most seed creators own 1-3 projects, which would otherwise leave grey gaps in the strip. */
+function padThumbnails(covers: string[]): string[] {
   if (covers.length >= 4) return covers.slice(0, 4);
-  const extra = projectGallery(projects[0].coverUrl);
-  return [...covers, ...extra].slice(0, 4);
+  if (covers.length === 0) return [];
+  return [...covers, ...projectGallery(covers[0])].slice(0, 4);
+}
+
+function creatorThumbnails(projects: ContentItem[]): string[] {
+  return padThumbnails(projects.map((project) => project.coverUrl));
 }
 
 type CreatorDraft = Omit<Creator, "tags"> & { employmentTag: string };
@@ -86,6 +91,14 @@ export const TAG_CLASS: Record<string, string> = {
   "Үйлчилгээ": "services",
 };
 
+/** Profile route id for a creator known only by name. Demo rows carry no owner id — the
+ * feed stamps them "seed" — so a card has to map the name back to the directory entry the
+ * profile page looks itself up by. Returns null when nobody matches, so the caller can
+ * render the name unlinked rather than route to a dead profile. */
+export function creatorProfileId(name: string): string | null {
+  return CREATOR_DIRECTORY.find((creator) => creator.name === name)?.id ?? null;
+}
+
 /** Row shape of the `profile_directory` Supabase view — one row per profile with
  * published-project stats and follower count already aggregated. */
 export type ProfileDirectoryRow = {
@@ -102,7 +115,14 @@ export type ProfileDirectoryRow = {
   project_views: number;
   appreciations: number;
   followers: number;
+  /** Up to 4 covers from the creator's newest published work, aggregated by the view. */
+  thumbnails: string[];
 };
+
+/** The status pills a creator can actually choose. "Онцлох" is deliberately absent:
+ * the platform awards it to the top-follower creator, it is never self-assigned. Shared by
+ * the profile edit dialog and the settings page so the two can't offer different lists. */
+export const SELECTABLE_EMPLOYMENT_TAGS = Object.keys(TAG_CLASS).filter((tag) => tag !== "Онцлох");
 
 export function mapProfileRow(row: ProfileDirectoryRow): Creator {
   return {
@@ -117,7 +137,7 @@ export function mapProfileRow(row: ProfileDirectoryRow): Creator {
     followers: row.followers,
     projectViews: row.project_views,
     projectCount: row.project_count,
-    thumbnails: [],
+    thumbnails: padThumbnails(row.thumbnails ?? []),
     coverUrl: row.cover_url ?? undefined,
   };
 }

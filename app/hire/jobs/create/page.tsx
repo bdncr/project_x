@@ -20,7 +20,7 @@ export default function HireJobsCreatePage() {
     router.push("/jobs/create");
   }
 
-  return <main className="jobs-page hire-flow-page">
+  return <main className="jobs-page jobs-page-scroll hire-flow-page">
     <div className="hire-flow-top">
       <Link className="job-form-back" href="/jobs"><Icon name="arrow" />Буцах</Link>
       <button type="button" className="hire-flow-skip" onClick={() => goToForm()}>AI-гүйгээр үүсгэх</button>

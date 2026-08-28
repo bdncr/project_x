@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Icon } from "../Icon";
 
 type MetaTagsGridProps = {
@@ -8,16 +7,17 @@ type MetaTagsGridProps = {
   category: string;
   tools: string[];
   createdAt: string;
+  onInvite: () => void;
 };
 
 /** The closing tags/tools/owner grid — creative-field chips, plain keyword pills, and a hire card. */
-export function MetaTagsGrid({ initial, creator, role, category, tools, createdAt }: MetaTagsGridProps) {
+export function MetaTagsGrid({ initial, creator, role, category, tools, createdAt, onInvite }: MetaTagsGridProps) {
   return <section className="case-light-section">
     <div className="case-meta-grid">
       <div className="case-meta-card">
         <p className="case-meta-label">БҮТЭЭГЧ</p>
         <div className="case-meta-owner-row"><span className="account-avatar">{initial}</span><div><strong>{creator}</strong><span>{role}</span></div></div>
-        <Link href="/hire/jobs/create" className="case-hire-btn"><Icon name="mail" />Ажилд урих</Link>
+        <button type="button" className="case-hire-btn" onClick={onInvite}><Icon name="mail" />Ажлын санал илгээх</button>
       </div>
       <div className="case-meta-card" id="case-tools-card">
         <p className="case-meta-label">ХЭРЭГСЭЛ</p>
