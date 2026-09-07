@@ -33,6 +33,12 @@ export function ContentCard({ item, isOwner, onToggleLike, onToggleSave, onEdit,
       <Link href={`/project/${item.id}`} className="image-button">
         <img src={item.coverUrl} alt="" />
       </Link>
+      {/* A private project is visible to its owner alone, so the badge is a reminder of why
+          nobody else is seeing it — not a control. Sits opposite the quick action so the two
+          never overlap. */}
+      {item.visibility === "private" && <span className="card-private" title="Хувийн — зөвхөн танд харагдана">
+        <Icon name="lock" />Хувийн
+      </span>}
       {/* Sibling of the cover link rather than a child of it: a <button> nested inside an
           <a> is invalid, and the action would also navigate. It sits in the cover's top-right
           corner and fades in with the rest of the hover layer. Saving your own work is

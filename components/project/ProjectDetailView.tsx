@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { User } from "@supabase/supabase-js";
@@ -23,16 +23,17 @@ import { useAuth } from "../../lib/AuthProvider";
 import { ContentItem, loadDemoProjects, projectGallery, projectOverview, toolsForCategory } from "../../lib/project-samples";
 import type { ProjectBlock } from "../../lib/project-editor";
 import { deleteProject } from "../../lib/project-crud";
+import { canFollow, fetchIsFollowing, setFollowing as persistFollowing } from "../../lib/follows";
 import { InviteForm, sendInvite } from "../../lib/invite-job";
 import { ProjectComment, createComment, deleteComment, fetchComments } from "../../lib/project-comments";
 
-type ProjectRow = { id: string; owner_id: string | null; title: string; role: string; description: string; category: string; cover_url: string; view_count: number; is_published: boolean; published_at: string | null; created_at: string; body_blocks: ProjectBlock[] | null; custom_button_label: string | null; custom_button_url: string | null; comments_disabled: boolean | null; profiles: { display_name: string; headline: string | null } | { display_name: string; headline: string | null }[] | null; project_likes: { count: number }[] | null };
+type ProjectRow = { id: string; owner_id: string | null; title: string; role: string; description: string; category: string; cover_url: string; view_count: number; is_published: boolean; published_at: string | null; created_at: string; body_blocks: ProjectBlock[] | null; custom_button_label: string | null; custom_button_url: string | null; comments_disabled: boolean | null; visibility: "everyone" | "private" | null; profiles: { display_name: string; headline: string | null } | { display_name: string; headline: string | null }[] | null; project_likes: { count: number }[] | null };
 
 const STORY_HEADINGS = ["ТӨСЛИЙН ТУХАЙ", "ХАНДЛАГА", "ҮР ДҮН"];
 
 function mapRow(project: ProjectRow): ContentItem {
   const profile = Array.isArray(project.profiles) ? project.profiles[0] : project.profiles;
-  return { id: project.id, ownerId: project.owner_id ?? "seed", title: project.title, creator: profile?.display_name ?? "Project X", role: project.role || profile?.headline || "Бүтээлч", category: project.category, summary: project.description ?? "", coverUrl: project.cover_url, likes: project.project_likes?.[0]?.count ?? 0, views: project.view_count ?? 0, saved: false, liked: false, status: project.is_published ? "published" : "draft", createdAt: project.published_at ?? project.created_at, blocks: project.body_blocks ?? undefined, customButtonLabel: project.custom_button_label ?? undefined, customButtonUrl: project.custom_button_url ?? undefined, commentsDisabled: project.comments_disabled ?? false };
+  return { id: project.id, ownerId: project.owner_id ?? "seed", title: project.title, creator: profile?.display_name ?? "Project X", role: project.role || profile?.headline || "Бүтээлч", category: project.category, summary: project.description ?? "", coverUrl: project.cover_url, likes: project.project_likes?.[0]?.count ?? 0, views: project.view_count ?? 0, saved: false, liked: false, status: project.is_published ? "published" : "draft", createdAt: project.published_at ?? project.created_at, blocks: project.body_blocks ?? undefined, customButtonLabel: project.custom_button_label ?? undefined, customButtonUrl: project.custom_button_url ?? undefined, commentsDisabled: project.comments_disabled ?? false, visibility: project.visibility ?? "everyone" };
 }
 
 /** Splits the case-study image gallery into three chunks that sit between the three story blocks. */
@@ -76,6 +77,10 @@ export function ProjectDetailView({ id }: { id: string }) {
   const [commentPosting, setCommentPosting] = useState(false);
   const [commentsError, setCommentsError] = useState<string | null>(null);
   const [commentText, setCommentText] = useState("");
+  /* Which project this visit has already counted. The load effect re-runs under StrictMode and
+     again whenever Supabase hands back a fresh user object on a token refresh, and each pass
+     used to fire the RPC — so one visit could count as three. */
+  const countedViewRef = useRef<string | null>(null);
 
   const notify = (message: string) => { setToast(message); window.setTimeout(() => setToast(""), 3000); };
   const requireUser = () => {
@@ -105,7 +110,7 @@ export function ProjectDetailView({ id }: { id: string }) {
         return;
       }
 
-      const { data, error } = await supabase.from("projects").select("id,owner_id,title,role,description,category,cover_url,view_count,is_published,published_at,created_at,body_blocks,custom_button_label,custom_button_url,comments_disabled,profiles!projects_owner_id_fkey(display_name,headline),project_likes(count)").eq("id", id).maybeSingle();
+      const { data, error } = await supabase.from("projects").select("id,owner_id,title,role,description,category,cover_url,view_count,is_published,published_at,created_at,body_blocks,custom_button_label,custom_button_url,comments_disabled,visibility,profiles!projects_owner_id_fkey(display_name,headline),project_likes(count)").eq("id", id).maybeSingle();
 
       if (cancelled) return;
 
@@ -129,7 +134,10 @@ export function ProjectDetailView({ id }: { id: string }) {
 
       if (cancelled) return;
       setItem(mapped);
-      void supabase.rpc("increment_project_views", { project_uuid: id });
+      if (countedViewRef.current !== id) {
+        countedViewRef.current = id;
+        void supabase.rpc("increment_project_views", { project_uuid: id });
+      }
 
       const { data: more } = await supabase.from("projects").select("id,owner_id,title,role,description,category,cover_url,view_count,is_published,published_at,created_at,profiles!projects_owner_id_fkey(display_name,headline),project_likes(count)").eq("is_published", true).eq("category", mapped.category).neq("id", id).limit(6);
       if (!cancelled) setRelated(((more ?? []) as unknown as ProjectRow[]).map(mapRow));
@@ -140,6 +148,18 @@ export function ProjectDetailView({ id }: { id: string }) {
     void load(user);
     return () => { cancelled = true; };
   }, [authReady, id, user]);
+
+  /* Follow state comes from profile_follows, not from local state: /people and /profile
+     already persist it, so a project page that only toggled a boolean showed "Дагах" for
+     someone you had already followed and forgot the click on reload. */
+  useEffect(() => {
+    if (!authReady || !item) return;
+    let cancelled = false;
+    void fetchIsFollowing(item.ownerId, user?.id ?? null).then((following) => {
+      if (!cancelled) setFollowing(following);
+    });
+    return () => { cancelled = true; };
+  }, [authReady, item?.ownerId, user]);
 
   /** The thread loads independently of the project itself so a slow comment query never holds
    * back the case study, and so posting/deleting does not have to refetch the project. */
@@ -189,10 +209,17 @@ export function ProjectDetailView({ id }: { id: string }) {
     if (error) notify(error.message); else notify(nextSaved ? "Бүтээл хадгалагдлаа." : "Хадгалсан жагсаалтаас хаслаа.");
   };
 
-  const toggleFollow = () => {
-    if (!requireUser()) return;
-    setFollowing((current) => !current);
-    notify(following ? "Дагахаа больлоо." : "Бүтээгчийг дагаж эхэллээ.");
+  const toggleFollow = async () => {
+    if (!item || !requireUser()) return;
+    const next = !following;
+    setFollowing(next);
+    if (!canFollow(item.ownerId, user?.id ?? null)) {
+      notify(next ? "Бүтээгчийг дагаж эхэллээ." : "Дагахаа больлоо.");
+      return;
+    }
+    const error = await persistFollowing(item.ownerId, user?.id ?? null, next);
+    if (error) { setFollowing(!next); notify(error); return; }
+    notify(next ? "Бүтээгчийг дагаж эхэллээ." : "Дагахаа больлоо.");
   };
 
   const sharePage = async () => {
@@ -225,7 +252,7 @@ export function ProjectDetailView({ id }: { id: string }) {
     if (!item || inviteBusy) return;
     setInviteBusy(true);
     const { error } = await sendInvite({
-      form, creatorName: item.creator, recipientId: item.ownerId, projectId: item.id,
+      form, creatorName: item.creator, recipientId: item.ownerId, recipientName: item.creator, projectId: item.id,
       author: { id: user?.id ?? null, name: user?.user_metadata.display_name || user?.email?.split("@")[0] || "Project X" },
     });
     setInviteBusy(false);
@@ -277,7 +304,7 @@ export function ProjectDetailView({ id }: { id: string }) {
     {loading || !item ? <CaseStudySkeletonBody /> : <>
       <ActionRail
         initial={initial} ownerId={item.ownerId} creatorName={item.creator} creatorRole={item.role} tools={tools}
-        following={following} onToggleFollow={toggleFollow}
+        following={following} onToggleFollow={() => void toggleFollow()}
         onInvite={openInvite}
         isOwner={isOwner} editHref={`/project/${item.id}?edit=1`}
         deleting={deleting} onDelete={() => void removeProject()}
@@ -285,13 +312,17 @@ export function ProjectDetailView({ id }: { id: string }) {
         liked={item.liked} onToggleLike={() => void toggleLike()} onShare={() => void sharePage()}
       />
 
+      {/* Only the owner can load a private project at all, so this is a reminder of why the
+          piece has no audience rather than a warning to a visitor. */}
+      {item.visibility === "private" && <p className="case-private"><Icon name="lock" />Хувийн төсөл — зөвхөн танд харагдана</p>}
+
       <figure className="case-hero"><img src={item.coverUrl} alt={item.title} /></figure>
 
       {item.blocks && item.blocks.length > 0
         ? <div className="case-body case-body-blocks"><BlockRenderer blocks={item.blocks} /></div>
         : <StoryBody title={item.title} story={story} slideChunks={slideChunks} />}
 
-      <AppreciateFooter item={item} initial={initial} commentCount={comments.length} onToggleLike={() => void toggleLike()} following={following} onToggleFollow={toggleFollow} related={related} />
+      <AppreciateFooter item={item} initial={initial} commentCount={comments.length} onToggleLike={() => void toggleLike()} following={following} onToggleFollow={() => void toggleFollow()} related={related} />
 
       <CommentsSection
         authorInitial={(user?.user_metadata.display_name || user?.email || "?").slice(0, 1).toUpperCase()}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { safeEmbedUrl, EmbedKind } from "../../../lib/project-editor";
+import { EMBED_HOSTS_HINT, safeEmbedUrl, EmbedKind } from "../../../lib/project-editor";
 
 const LABELS: Record<EmbedKind, string> = {
   embed: "Embed код эсвэл холбоос",
@@ -28,7 +28,7 @@ export function EmbedBlockEditor({ url, kind, onChange }: EmbedBlockEditorProps)
 
   return <div className="block-field-group">
     <label>{LABELS[kind]}<textarea value={url} onChange={(event) => onChange(event.target.value)} rows={2} placeholder="https:// эсвэл <iframe> код paste хийнэ үү" /></label>
-    {settled && url.trim() && !src && <p className="block-hint">Бүтэн холбоос оруулна уу — https:// -ээр эхэлсэн хаяг эсвэл &lt;iframe&gt; код.</p>}
+    {settled && url.trim() && !src && <p className="block-hint">Дэмжигдэх үйлчилгээний бүтэн холбоос оруулна уу: {EMBED_HOSTS_HINT}.</p>}
     {src && <div className="block-embed-frame"><iframe src={src} loading="lazy" sandbox="allow-scripts allow-same-origin allow-presentation allow-popups" /></div>}
   </div>;
 }

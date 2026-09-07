@@ -96,6 +96,9 @@ classDiagram
     +string note
     +string createdAt
     +string readAt
+    +OfferStatus status
+    +string reply
+    +string respondedAt
   }
 
   class InviteForm {
@@ -184,6 +187,12 @@ classDiagram
     personal
     company
   }
+  class OfferStatus {
+    <<enumeration>>
+    pending
+    accepted
+    declined
+  }
   class AuthMode {
     <<enumeration>>
     signin
@@ -237,9 +246,11 @@ classDiagram
   class job_offers {
     <<module>>
     +sendOffer(input) string
-    +fetchInbox(userId)
+    +fetchOffers(box, userId)
+    +respondToOffer(offer, decision, reply) RespondResult
     +markOffersRead(userId, offers)
     +canDeliverRemotely(recipientId)
+    +STATUS_LABEL
   }
   class jobs_data {
     <<module>>

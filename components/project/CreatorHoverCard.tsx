@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Icon } from "../Icon";
+import { Avatar } from "../Avatar";
 import { Creator, TAG_CLASS } from "../../lib/creator-samples";
 import { fetchCreatorSummary } from "../../lib/creator-lookup";
 import { compactNumber } from "../../lib/format";
@@ -62,7 +63,7 @@ export function CreatorHoverCard({ ownerId, name, role, initial, following, onTo
           : <span className="creator-pop-strip-empty" />}
       </div>
 
-      <span className="account-avatar creator-pop-avatar">{initial}</span>
+      <Avatar url={creator?.avatarUrl} initial={initial} className="creator-pop-avatar" />
 
       <div className="creator-pop-body">
         {profileHref

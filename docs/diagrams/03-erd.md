@@ -134,6 +134,9 @@ erDiagram
     text note "хувийн захиас"
     timestamptz created_at
     timestamptz read_at "null бол уншаагүй"
+    text status "pending | accepted | declined"
+    text reply "бүтээгчийн хариу"
+    timestamptz responded_at
   }
 ```
 
@@ -155,11 +158,11 @@ erDiagram
 | `projects` | нийтлэгдсэн эсвэл өөрийнх | зөвхөн өөрийнх | зөвхөн өөрийнх |
 | `project_likes` | бүгд | зөвхөн өөрийнх | зөвхөн өөрийнх |
 | `project_saves` | **зөвхөн эзэн** | зөвхөн өөрийнх | зөвхөн өөрийнх |
-| `project_comments` | бүгд | зөвхөн өөрийнх | зохиогч **эсвэл төслийн эзэн** |
+| `project_comments` | бүгд | өөрийнх, зөвхөн нээлттэй төсөлд (`comments_disabled` RLS-ээр хаана) | зохиогч **эсвэл төслийн эзэн** |
 | `profile_follows` | бүгд | зөвхөн өөрийнх | зөвхөн өөрийнх |
 | `job_posts` | бүгд | зөвхөн өөрийнх | зөвхөн өөрийнх |
 | `job_saves` / `job_applications` | зөвхөн өөрийнх (+ зарын эзэн) | зөвхөн өөрийнх | зөвхөн өөрийнх |
-| `job_offers` | **зөвхөн илгээгч ба хүлээн авагч** | зөвхөн илгээгч | хоёулаа |
+| `job_offers` | **зөвхөн илгээгч ба хүлээн авагч** | илгээгч (insert) · хүлээн авагч (хариу) | хоёулаа |
 
 > `job_offers` бол цорын ганц **бүрэн хаалттай** хүснэгт: төсөв, хувийн захиас агуулдаг тул
 > `anon` эрх огт өгөөгүй.
@@ -170,7 +173,6 @@ erDiagram
 erDiagram
   profiles ||--o{ notifications : "хүлээн авна"
   profiles ||--o{ messages : "бичнэ"
-  job_offers ||--o| offer_responses : "хариу"
   profiles ||--o{ profile_services : "санал болгоно"
 
   notifications {
@@ -185,11 +187,6 @@ erDiagram
     uuid thread_id
     uuid sender_id FK
     text body
-  }
-  offer_responses {
-    uuid offer_id PK
-    text decision "accepted | declined"
-    text reply
   }
   profile_services {
     uuid id PK

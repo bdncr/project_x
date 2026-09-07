@@ -219,3 +219,7 @@ a.creator-pop-name:hover { color: #1769ff; }
   .case-comment-composer { flex-direction: column; }
   .case-skeleton-cover { height: 260px; }
 }
+
+/* Private notice above the cover on the owner's own unpublished-to-the-world project. */
+.case-private { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0; padding: 11px 18px; background: #1c1d2b; color: #d8dae6; font-size: 12px; font-weight: 700; }
+.case-private svg { width: 15px; }

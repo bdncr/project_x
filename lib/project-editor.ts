@@ -59,7 +59,9 @@ export function createBlock(type: BlockType, kind?: EmbedKind): ProjectBlock {
  * HTML is later rendered on other users' pages via a project's public detail view. */
 export function sanitizeRichText(html: string): string {
   const allowedTags = new Set(["B", "STRONG", "I", "EM", "U", "P", "BR", "DIV", "SPAN", "UL", "OL", "LI", "A"]);
-  if (typeof window === "undefined" || typeof document === "undefined") return "";
+  /* No DOM to parse with during server rendering. Returning "" there blanks every text block
+     out of the server-rendered HTML, so fall back to a string pass over the same allow-list. */
+  if (typeof window === "undefined" || typeof document === "undefined") return sanitizeRichTextWithoutDom(html, allowedTags);
   const template = document.createElement("template");
   template.innerHTML = html;
 
@@ -90,6 +92,28 @@ export function sanitizeRichText(html: string): string {
   return template.innerHTML;
 }
 
+/**
+ * Server-side fallback for sanitizeRichText. Strips comments and CDATA outright, drops
+ * script/style bodies whole, then rewrites every remaining tag: anything outside the
+ * allow-list disappears (its text survives, since only the tag goes), and an allowed tag is
+ * re-emitted bare. No attribute survives at all, so there is nothing for an event handler or
+ * a javascript: href to ride in on — stricter than the DOM pass, which is the right way round
+ * for a fallback.
+ */
+function sanitizeRichTextWithoutDom(html: string, allowedTags: Set<string>): string {
+  return html
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/<!\[CDATA\[[\s\S]*?\]\]>/gi, "")
+    .replace(/<(script|style|iframe|object|embed|template)\b[\s\S]*?<\/\1\s*>/gi, "")
+    .replace(/<\/?([a-zA-Z][a-zA-Z0-9]*)\b[^>]*>/g, (match, rawTag: string) => {
+      if (!allowedTags.has(rawTag.toUpperCase())) return "";
+      const name = rawTag.toLowerCase();
+      return match.startsWith("</") ? "</" + name + ">" : "<" + name + ">";
+    })
+    /* Whatever angle brackets are left are literal text, not markup. */
+    .replace(/<(?![a-zA-Z/])/g, "&lt;");
+}
+
 /** Pulls the iframe src out of a pasted embed snippet, or accepts a plain URL as-is. */
 export function extractEmbedUrl(pasted: string): string {
   const trimmed = pasted.trim();
@@ -97,16 +121,46 @@ export function extractEmbedUrl(pasted: string): string {
   return match ? match[1] : trimmed;
 }
 
-/** The only value that may ever reach an <iframe src>. Anything that is not an absolute
- * http(s) URL returns null, because a relative src resolves against the page the iframe sits
- * on: a half-typed "h" in the embed field becomes /project/h and loads the whole app inside
- * itself, recursively, on every keystroke. */
+/**
+ * Hosts a project may frame. An embed runs with allow-scripts, so without a list any project
+ * could frame an arbitrary page — a convincing login form included — inside a Project X URL.
+ * Add to this rather than loosening it.
+ */
+export const EMBED_HOSTS = [
+  "youtube.com", "youtube-nocookie.com", "youtu.be",
+  "vimeo.com", "player.vimeo.com",
+  "figma.com", "www.figma.com",
+  "sketchfab.com", "my.spline.design", "spline.design",
+  "codepen.io", "codesandbox.io", "stackblitz.com",
+  "loom.com", "www.loom.com",
+  "soundcloud.com", "w.soundcloud.com",
+  "docs.google.com", "drive.google.com",
+  "behance.net", "www.behance.net",
+];
+
+export const EMBED_HOSTS_HINT = "YouTube, Vimeo, Figma, Sketchfab, Spline, CodePen, Loom, SoundCloud, Google Docs";
+
+function hostAllowed(hostname: string): boolean {
+  const host = hostname.replace(/^www./, "").toLowerCase();
+  return EMBED_HOSTS.some((allowed) => {
+    const base = allowed.replace(/^www./, "");
+    return host === base || host.endsWith("." + base);
+  });
+}
+
+/** The only value that may ever reach an <iframe src>. Two separate guards:
+ *
+ * 1. It must be an absolute http(s) URL — a relative src resolves against the page the iframe
+ *    sits on, so a half-typed "h" becomes /project/h and loads the whole app inside itself.
+ * 2. Its host must be on EMBED_HOSTS, since the frame is granted allow-scripts. */
 export function safeEmbedUrl(raw: string): string | null {
   const candidate = extractEmbedUrl(raw);
   if (!candidate) return null;
   try {
     const parsed = new URL(candidate);
-    return parsed.protocol === "https:" || parsed.protocol === "http:" ? parsed.href : null;
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return null;
+    if (!hostAllowed(parsed.hostname)) return null;
+    return parsed.href;
   } catch {
     return null;
   }

@@ -49,11 +49,11 @@ export function validateInvite(form: InviteForm): InviteErrors {
  * Folds the invite into the same JobForm the jobs board posts, so an invitation lands on
  * /jobs as an ordinary listing rather than as a second, parallel kind of record.
  *
- * The personal note is carried into the description under its own heading: there is no
- * messaging table in this schema, so appending it is the only way it survives at all.
+ * The personal note is deliberately NOT part of this. job_posts is readable by anon for any
+ * active listing, so anything folded into the description would be public; the note travels
+ * only on the job_offers row, which is private to the two parties.
  */
-export function buildInviteJobForm(form: InviteForm, inviterName: string, creatorName: string): JobForm {
-  const noteLines = form.note.trim() ? `\n\nХувийн захиас (${creatorName}-д):\n${form.note.trim()}` : "";
+export function buildInviteJobForm(form: InviteForm, inviterName: string): JobForm {
   return {
     title: form.title.trim(),
     company: form.hiringFor === "company" ? form.companyName.trim() : inviterName,
@@ -62,7 +62,7 @@ export function buildInviteJobForm(form: InviteForm, inviterName: string, creato
     workMode: "remote",
     employmentType: "freelance",
     salary: form.budget || "Төсөв тохиролцоно",
-    description: `${form.description.trim()}${noteLines}`.trim(),
+    description: form.description.trim(),
     skills: form.categories.join(", "),
     responsibilities: "",
     requirements: "",
@@ -80,15 +80,17 @@ export async function sendInvite(options: {
   form: InviteForm;
   creatorName: string;
   recipientId: string;
+  recipientName: string;
   projectId: string;
   author: { id: string | null; name: string };
 }): Promise<SendInviteResult> {
   const { form, creatorName, recipientId, projectId, author } = options;
-  const jobForm = buildInviteJobForm(form, author.name, creatorName);
+  const recipientName = options.recipientName || creatorName;
+  const jobForm = buildInviteJobForm(form, author.name);
   const color = randomCompanyColor();
   const deliver = (jobId: string | null) => sendOffer({
     jobId, projectId: UUID_RE.test(projectId) ? projectId : null,
-    recipientId, title: jobForm.title, budget: jobForm.salary, note: form.note.trim(),
+    recipientId, recipientName, title: jobForm.title, budget: jobForm.salary, note: form.note.trim(),
     sender: author,
   });
 

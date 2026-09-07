@@ -12,7 +12,7 @@ import { supabase } from "../../lib/supabase";
 import { runAuthSubmit } from "../../lib/auth-actions";
 import { useAuth } from "../../lib/AuthProvider";
 import { Creator, CREATOR_DIRECTORY, ProfileDirectoryRow, mapProfileRow } from "../../lib/creator-samples";
-import { getCachedCreators, getSharedQuery, setCachedCreators, setSharedQuery } from "../../lib/feed-cache";
+import { getCachedCreators, getSharedQuery, setCachedCreators, setSharedQuery, viewerKey } from "../../lib/feed-cache";
 
 type PeopleSortMode = "recommended" | "followers" | "appreciated" | "viewed";
 
@@ -25,11 +25,12 @@ const SORT_OPTIONS: [PeopleSortMode, string][] = [
 
 export default function PeoplePage() {
   const { user, authReady } = useAuth();
+  const viewer = viewerKey(user?.id);
   // Seeded from the cache so returning from Төслүүд paints the last grid immediately
   // instead of dropping back to skeletons while the same rows are fetched again.
-  const [creators, setCreators] = useState<Creator[]>(() => getCachedCreators()?.items ?? []);
-  const [loading, setLoading] = useState(() => !getCachedCreators());
-  const [dataMode, setDataMode] = useState<"backend" | "demo">(() => getCachedCreators()?.dataMode ?? "demo");
+  const [creators, setCreators] = useState<Creator[]>(() => getCachedCreators(viewer)?.items ?? []);
+  const [loading, setLoading] = useState(() => !getCachedCreators(viewer));
+  const [dataMode, setDataMode] = useState<"backend" | "demo">(() => getCachedCreators(viewer)?.dataMode ?? "demo");
   const [query, setQuery] = useState(getSharedQuery);
   const [sortMode, setSortMode] = useState<PeopleSortMode>("recommended");
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
@@ -59,7 +60,7 @@ export default function PeoplePage() {
       if (!supabase) {
         setCreators(CREATOR_DIRECTORY);
         setDataMode("demo");
-        setCachedCreators(CREATOR_DIRECTORY, "demo");
+        setCachedCreators(CREATOR_DIRECTORY, "demo", viewer);
         setLoading(false);
         return;
       }
@@ -67,14 +68,14 @@ export default function PeoplePage() {
       if (error || !data || data.length === 0) {
         setCreators(CREATOR_DIRECTORY);
         setDataMode("demo");
-        setCachedCreators(CREATOR_DIRECTORY, "demo");
+        setCachedCreators(CREATOR_DIRECTORY, "demo", viewer);
         setLoading(false);
         return;
       }
       const nextCreators = (data as ProfileDirectoryRow[]).map(mapProfileRow);
       setCreators(nextCreators);
       setDataMode("backend");
-      setCachedCreators(nextCreators, "backend");
+      setCachedCreators(nextCreators, "backend", viewer);
       if (user) {
         const { data: follows } = await supabase.from("profile_follows").select("followee_id").eq("follower_id", user.id);
         setFollowedIds((follows ?? []).map((row) => row.followee_id));

@@ -3,7 +3,14 @@ import type { ContentItem } from "./project-samples";
 
 export type FeedDataMode = "backend" | "demo";
 
-type CachedFeed<T> = { items: T[]; dataMode: FeedDataMode } | null;
+/** Whose view of the feed this is. Signed out is its own key, not a missing one. */
+export type ViewerKey = string;
+
+export function viewerKey(userId: string | null | undefined): ViewerKey {
+  return userId ?? "anon";
+}
+
+type CachedFeed<T> = { items: T[]; dataMode: FeedDataMode; viewer: ViewerKey } | null;
 
 /**
  * What the explore and people feeds last rendered, deliberately held outside React.
@@ -14,6 +21,12 @@ type CachedFeed<T> = { items: T[]; dataMode: FeedDataMode } | null;
  * skeleton grid and discarding whatever was typed in the search box — which reads as a full
  * page reload even though routing never leaves the client.
  *
+ * Every entry is stamped with the viewer it was fetched for and only handed back to that same
+ * viewer. A feed carries per-user state — which pieces you liked and saved, and your own
+ * drafts and private projects, which RLS returns to you and to nobody else — so serving it to
+ * whoever is signed in next would show one person another person's unpublished work for as
+ * long as the refetch takes.
+ *
  * A real browser reload drops the module, which is precisely when a refetch is wanted.
  */
 const cache: {
@@ -22,12 +35,27 @@ const cache: {
   query: string;
 } = { projects: null, creators: null, query: "" };
 
-export function getCachedProjects() { return cache.projects; }
-export function setCachedProjects(items: ContentItem[], dataMode: FeedDataMode) { cache.projects = { items, dataMode }; }
+export function getCachedProjects(viewer: ViewerKey) {
+  return cache.projects?.viewer === viewer ? cache.projects : null;
+}
+export function setCachedProjects(items: ContentItem[], dataMode: FeedDataMode, viewer: ViewerKey) {
+  cache.projects = { items, dataMode, viewer };
+}
 
-export function getCachedCreators() { return cache.creators; }
-export function setCachedCreators(items: Creator[], dataMode: FeedDataMode) { cache.creators = { items, dataMode }; }
+export function getCachedCreators(viewer: ViewerKey) {
+  return cache.creators?.viewer === viewer ? cache.creators : null;
+}
+export function setCachedCreators(items: Creator[], dataMode: FeedDataMode, viewer: ViewerKey) {
+  cache.creators = { items, dataMode, viewer };
+}
 
-/** Shared by both feeds so switching between them keeps whatever is in the search box. */
+/** Shared by both feeds so switching between them keeps whatever is in the search box. A
+ * search term is the viewer's own typing, not fetched data, so it is not viewer-scoped. */
 export function getSharedQuery() { return cache.query; }
 export function setSharedQuery(value: string) { cache.query = value; }
+
+/** Drops everything on sign-out, so nothing survives even until the next fetch resolves. */
+export function clearFeedCache() {
+  cache.projects = null;
+  cache.creators = null;
+}

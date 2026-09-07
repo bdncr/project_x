@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Icon } from "../Icon";
+import { Avatar } from "../Avatar";
 import { Creator, TAG_CLASS } from "../../lib/creator-samples";
 import { compactNumber } from "../../lib/format";
 
@@ -29,7 +30,7 @@ export function CreatorCard({ creator, following, followerDelta, onToggleFollow,
         {thumbs.map((src, index) => src ? <img key={index} src={src} alt="" /> : <span key={index} className="creator-thumb-empty" />)}
       </div>
       <span className="creator-avatar-wrap">
-        <span className="account-avatar creator-avatar">{creator.name.slice(0, 1).toUpperCase()}</span>
+        <Avatar url={creator.avatarUrl} initial={creator.name.slice(0, 1).toUpperCase()} className="creator-avatar" />
         {creator.isPro && <b className="creator-pro">PRO</b>}
       </span>
     </div>

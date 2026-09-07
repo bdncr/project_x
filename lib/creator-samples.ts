@@ -7,6 +7,8 @@ export type Creator = {
   category: string;
   location: string;
   isPro: boolean;
+  /** Profile photo set in Тохиргоо; absent for the demo directory, which uses initials. */
+  avatarUrl?: string;
   /** Status pills shown on the card, e.g. "Онцлох", "Freelance", "Бүтэн цаг". */
   tags: string[];
   appreciations: number;
@@ -132,6 +134,7 @@ export function mapProfileRow(row: ProfileDirectoryRow): Creator {
     category: "",
     location: row.location || "Улаанбаатар",
     isPro: row.is_pro,
+    avatarUrl: row.avatar_url ?? undefined,
     tags: row.employment_tags ?? [],
     appreciations: row.appreciations,
     followers: row.followers,

@@ -76,8 +76,8 @@ create table if not exists public.project_saves (
 );
 
 -- Comment thread under a case study (components/project/CommentsSection.tsx). The project's
--- comments_disabled flag hides the composer in the UI; the insert policy below still allows a
--- comment on a project whose author later re-enables them, which is the intended behaviour.
+-- The project's comments_disabled flag is enforced by the insert policy further down, not just
+-- by hiding the composer, so a direct API call cannot write past it either.
 create table if not exists public.project_comments (
   id uuid primary key default gen_random_uuid(),
   project_id uuid not null references public.projects(id) on delete cascade,
@@ -99,6 +99,11 @@ create table if not exists public.job_offers (
   note text not null default '',
   created_at timestamptz not null default now(),
   read_at timestamptz,
+  -- The creator answers in place: status and reply live on the offer rather than in a
+  -- separate response row, since an offer can only ever be answered once.
+  status text not null default 'pending' check (status in ('pending', 'accepted', 'declined')),
+  reply text not null default '',
+  responded_at timestamptz,
   check (sender_id <> recipient_id)
 );
 
@@ -117,6 +122,7 @@ create index if not exists project_likes_project_idx on public.project_likes (pr
 create index if not exists project_saves_user_idx on public.project_saves (user_id);
 create index if not exists project_comments_project_idx on public.project_comments (project_id, created_at desc);
 create index if not exists job_offers_recipient_idx on public.job_offers (recipient_id, created_at desc);
+create index if not exists job_offers_sender_idx on public.job_offers (sender_id, created_at desc);
 create index if not exists profile_follows_follower_idx on public.profile_follows (follower_id);
 create index if not exists profile_follows_followee_idx on public.profile_follows (followee_id);
 
@@ -276,7 +282,13 @@ create policy "Users manage their saves" on public.project_saves for all using (
 drop policy if exists "Comments are readable" on public.project_comments;
 create policy "Comments are readable" on public.project_comments for select using (true);
 drop policy if exists "Users write their comments" on public.project_comments;
-create policy "Users write their comments" on public.project_comments for insert with check (auth.uid() = author_id);
+create policy "Users write their comments" on public.project_comments for insert with check (
+  auth.uid() = author_id
+  and exists (
+    select 1 from public.projects p
+    where p.id = project_id and not p.comments_disabled and p.is_published
+  )
+);
 drop policy if exists "Users update their comments" on public.project_comments;
 create policy "Users update their comments" on public.project_comments for update using (auth.uid() = author_id) with check (auth.uid() = author_id);
 -- Deleting is open to the comment's author and to the project's owner, so a creator can
@@ -295,7 +307,8 @@ using (auth.uid() = recipient_id or auth.uid() = sender_id);
 drop policy if exists "Users send their own offers" on public.job_offers;
 create policy "Users send their own offers" on public.job_offers for insert with check (auth.uid() = sender_id);
 drop policy if exists "Recipients mark offers read" on public.job_offers;
-create policy "Recipients mark offers read" on public.job_offers for update
+drop policy if exists "Recipients read and answer offers" on public.job_offers;
+create policy "Recipients read and answer offers" on public.job_offers for update
 using (auth.uid() = recipient_id) with check (auth.uid() = recipient_id);
 drop policy if exists "Both parties delete offers" on public.job_offers;
 create policy "Both parties delete offers" on public.job_offers for delete

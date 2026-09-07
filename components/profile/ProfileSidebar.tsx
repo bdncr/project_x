@@ -1,4 +1,5 @@
 import { Icon } from "../Icon";
+import { Avatar } from "../Avatar";
 import { Creator, TAG_CLASS } from "../../lib/creator-samples";
 import { compactNumber } from "../../lib/format";
 import { ProfileAbout } from "./ProfileAbout";
@@ -16,7 +17,7 @@ type ProfileSidebarProps = {
 export function ProfileSidebar({ creator, isSelf, following, joinedAt, onToggleFollow, onMessage, onEditProfile }: ProfileSidebarProps) {
   return <aside className="profile-sidebar">
     <div className="profile-avatar-wrap">
-      <span className="account-avatar profile-avatar">{creator.name.slice(0, 1).toUpperCase()}</span>
+      <Avatar url={creator.avatarUrl} initial={creator.name.slice(0, 1).toUpperCase()} className="profile-avatar" />
       {creator.isPro && <b className="creator-pro profile-pro">PRO</b>}
     </div>
     <h1>{creator.name}</h1>

@@ -960,3 +960,19 @@ footer span {
     flex-direction: column;
   }
 }
+/* An avatar that has a photo drops its letter and its background tint; the element keeps its
+   size and shape so every size variant (.creator-avatar, .profile-avatar, .case-rail-avatar…)
+   applies unchanged. See components/Avatar.tsx. */
+.account-avatar.has-photo {
+  padding: 0;
+  overflow: hidden;
+  background: var(--surface, #eee);
+}
+
+.account-avatar.has-photo img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  border-radius: inherit;
+}
