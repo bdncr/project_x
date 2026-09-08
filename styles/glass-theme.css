@@ -1,0 +1,892 @@
+/* ============================================================================
+   Project X — Glass theme
+   Frosted glass panels, soft light, a blue -> white gradient ground, composed
+   in depth layers.
+
+   Imported LAST from app/globals.css, which does two jobs:
+
+   1. Custom properties resolve at use time, so the :root block below outranks
+      the earlier ones in base-theme.css and explore-feed.css — every existing
+      var(--ink) / var(--accent) in those files repaints with no edit.
+   2. Equal-specificity surface rules win by source order, so no !important.
+
+   Restraint is the point. This is a dense, image-led discovery site: the work
+   on the page is the subject, and the interface is the frame around it. Glass
+   goes on the frame, never over the work. Full spec: docs/design-system.md.
+   ========================================================================= */
+
+:root {
+  /* -- Layer 1: primitives ----------------------------------------------- */
+
+  /* Built around #1769ff, which was already the app's brand blue. */
+  --blue-50: #f5f9ff;
+  --blue-100: #eaf2fd;
+  --blue-200: #d6e5fa;
+  --blue-300: #b3cef4;
+  --blue-400: #7ba8ff;
+  --blue-500: #1769ff;
+  --blue-600: #0d55d8;
+  --blue-700: #0b45ad;
+  --blue-800: #0c2c63;
+  --blue-900: #08183a;
+
+  /* Neutrals carry a faint blue cast, so white reads as cool daylight. */
+  --mist-0: #ffffff;
+  --mist-50: #fafcff;
+  --mist-100: #f3f7fc;
+  --mist-200: #e8eef7;
+  --mist-300: #dae3ef;
+  --mist-400: #c4d0e0;
+
+  /* Text ramp. --ink-500 (~5.4:1 on white) is the lightest step allowed to
+     carry prose; "low contrast" is on the negative list. */
+  --ink-900: #101828;
+  --ink-700: #2b3648;
+  --ink-500: #58637a;
+  --ink-400: #7c869a;
+
+  --state-success: #12855c;
+  --state-danger: #cf3a3a;
+  --state-warning: #b6741a;
+
+  /* -- Layer 2: semantic --------------------------------------------------- */
+
+  /* Glass weights. Higher number = more opaque = closer to the viewer. */
+  --glass-1: rgba(255, 255, 255, 0.58);
+  --glass-2: rgba(255, 255, 255, 0.74);
+  --glass-3: rgba(255, 255, 255, 0.86);
+  --glass-tint: rgba(234, 242, 253, 0.72);
+  --glass-sunk: rgba(234, 242, 253, 0.55);
+
+  --glass-line: rgba(255, 255, 255, 0.80);
+  --glass-line-soft: rgba(140, 170, 215, 0.24);
+  --glass-sheen: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+
+  /* saturate() is what stops colour behind the glass going grey. */
+  --blur-sm: saturate(160%) blur(8px);
+  --blur-md: saturate(170%) blur(16px);
+  --blur-lg: saturate(180%) blur(24px);
+
+  /* Elevation: a tight contact shadow plus a wide soft one, tinted blue rather
+     than black, capped at .13 alpha. "Harsh shadows" is on the negative list,
+     so nothing here may get darker or tighter. */
+  --elev-1: 0 1px 2px rgba(16, 40, 88, .04), 0 2px 8px rgba(16, 40, 88, .05);
+  --elev-2: 0 1px 3px rgba(16, 40, 88, .05), 0 8px 20px rgba(16, 40, 88, .07);
+  --elev-3: 0 2px 6px rgba(16, 40, 88, .06), 0 16px 38px rgba(16, 40, 88, .10);
+  --elev-4: 0 6px 16px rgba(16, 40, 88, .08), 0 30px 70px rgba(16, 40, 88, .13);
+  --ring: 0 0 0 3px rgba(23, 105, 255, .18);
+
+  /* Radii stay modest. Softened corners, not pills — a dense grid rounded to
+     capsules reads as toy-like, and "cluttered" is on the negative list.
+     --r-pill is reserved for things that are genuinely capsule-shaped. */
+  --r-xs: 6px;
+  --r-sm: 9px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 20px;
+  --r-pill: 999px;
+
+  --surface: var(--mist-0);
+  --text: var(--ink-900);
+  --text-soft: var(--ink-500);
+  --border: rgba(120, 150, 200, 0.20);
+  --brand: var(--blue-500);
+  --brand-strong: var(--blue-600);
+
+  --ease: cubic-bezier(.22, .61, .36, 1);
+
+  /* -- Layer 3: legacy remap ----------------------------------------------
+     The names the older stylesheets already call, repointed at layer 2. This
+     is what repaints them without editing them. Don't add new usages. */
+  --ink: var(--ink-900);
+  --paper: transparent;
+  --panel: var(--glass-3);
+  --line: var(--border);
+  --muted: var(--text-soft);
+  --accent: var(--brand);
+  --accent-dark: var(--brand-strong);
+  --green: var(--state-success);
+  --danger: var(--state-danger);
+  --shadow: var(--elev-2);
+}
+
+/* ---------------------------------------------------------------------------
+   The ground
+   Blue at the top of the page settling into white behind the content, plus one
+   soft bloom. It is one multi-layer background on <body> rather than positioned
+   pseudo-elements, so it can never be caught in a stacking context with the
+   sticky header (z-index 30) or a modal.
+
+   Deliberately quiet: the feed is wall-to-wall artwork, and a loud ground
+   competes with it. The blue should be felt at the top of the page and behind
+   the margins, not read as a coloured backdrop.
+   ------------------------------------------------------------------------ */
+
+body {
+  min-height: 100vh;
+  color: var(--text);
+  background:
+    radial-gradient(1180px 660px at 80% -12%, rgba(23, 105, 255, .22), transparent 62%),
+    radial-gradient(920px 620px at 4% 10%, rgba(90, 150, 255, .17), transparent 64%),
+    radial-gradient(1100px 640px at 96% 78%, rgba(23, 105, 255, .10), transparent 62%),
+    radial-gradient(1300px 700px at 40% 108%, rgba(23, 105, 255, .12), transparent 64%),
+    linear-gradient(180deg, #d5e5fa 0%, #e6f0fd 24%, #f4f9ff 52%, var(--mist-0) 76%, #eaf3fe 100%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+/* ---------------------------------------------------------------------------
+   Primitives — use these on new markup instead of re-deriving the recipe.
+   ------------------------------------------------------------------------ */
+
+.glass-panel {
+  border: 1px solid var(--glass-line);
+  border-radius: var(--r-lg);
+  background: var(--glass-3);
+  -webkit-backdrop-filter: var(--blur-lg);
+  backdrop-filter: var(--blur-lg);
+  box-shadow: var(--elev-3), var(--glass-sheen);
+}
+
+.glass-card {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--glass-2);
+  box-shadow: var(--elev-1);
+}
+
+.glass-sunk {
+  border: 1px solid var(--glass-line-soft);
+  border-radius: var(--r-sm);
+  background: var(--glass-sunk);
+}
+
+.glass-pill {
+  border: 1px solid var(--glass-line-soft);
+  border-radius: var(--r-pill);
+  background: var(--glass-1);
+  color: var(--text-soft);
+}
+
+.glass-field {
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--glass-3);
+  color: var(--text);
+}
+
+.glass-field:focus,
+.glass-field:focus-within {
+  border-color: var(--blue-300);
+  box-shadow: var(--ring);
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--blue-500);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------------------
+   Shell
+   ------------------------------------------------------------------------ */
+
+.site-header {
+  background: var(--glass-2);
+  -webkit-backdrop-filter: var(--blur-md);
+  backdrop-filter: var(--blur-md);
+  color: var(--text);
+  border-bottom: 1px solid var(--glass-line-soft);
+  box-shadow: 0 1px 0 var(--glass-line);
+}
+
+.site-header nav {
+  color: var(--ink-700);
+}
+
+.site-header nav a:hover,
+.brand b {
+  color: var(--brand);
+}
+
+.share-work {
+  border: 1px solid var(--glass-line-soft);
+  border-radius: var(--r-sm);
+  background: var(--glass-1);
+  color: var(--ink-700);
+  transition: background .18s var(--ease), border-color .18s var(--ease);
+}
+
+.share-work:hover {
+  border-color: var(--blue-300);
+  background: var(--glass-3);
+  color: var(--brand);
+}
+
+.header-icon {
+  border-radius: var(--r-xs);
+  color: var(--ink-700);
+  transition: background .18s var(--ease), color .18s var(--ease);
+}
+
+.header-icon:hover {
+  background: var(--glass-tint);
+  color: var(--brand);
+}
+
+.header-icon-dot {
+  background: var(--state-danger);
+  box-shadow: 0 0 0 2px var(--mist-0);
+}
+
+footer {
+  background: linear-gradient(180deg, var(--blue-800), var(--blue-900));
+  color: rgba(255, 255, 255, .80);
+}
+
+footer .brand,
+footer .brand b {
+  color: #fff;
+}
+
+/* ---------------------------------------------------------------------------
+   Floating layers
+   Frosted glass belongs on things that hover over content. It is deliberately
+   NOT applied to grid cards: dozens of simultaneous backdrop-filters cost real
+   frames, and blur under 12px text is what makes a glass UI read as cluttered
+   and low-contrast.
+   ------------------------------------------------------------------------ */
+
+.nav-menu,
+.share-menu,
+.header-menu-panel,
+.account-panel,
+.case-rail-pop {
+  border: 1px solid var(--glass-line);
+  border-radius: var(--r-md);
+  background: var(--glass-3);
+  -webkit-backdrop-filter: var(--blur-lg);
+  backdrop-filter: var(--blur-lg);
+  box-shadow: var(--elev-3), var(--glass-sheen);
+}
+
+/* The arrow tying a panel to its trigger has to match the panel's own glass,
+   or it reads as a solid white chip stuck to a translucent box. */
+.share-menu::before,
+.header-menu-panel::before,
+.account-panel::before {
+  background: var(--glass-3);
+  -webkit-backdrop-filter: var(--blur-lg);
+  backdrop-filter: var(--blur-lg);
+  border-left: 1px solid var(--glass-line);
+  border-top: 1px solid var(--glass-line);
+}
+
+.nav-menu a,
+.account-panel-link {
+  color: var(--ink-700);
+}
+
+.nav-menu a:hover,
+.account-panel-link:hover {
+  background: var(--glass-tint);
+  color: var(--brand);
+}
+
+.account-panel-link {
+  border-top-color: var(--glass-line-soft);
+}
+
+.header-menu-head,
+.offer-tabs {
+  border-bottom-color: var(--glass-line-soft);
+}
+
+.header-menu-count {
+  color: var(--brand);
+}
+
+/* Scrims: deep blue rather than neutral grey, and blurred, so the page behind
+   a dialog stays part of the composition instead of going flat. */
+.modal-backdrop,
+.jobs-modal-backdrop {
+  background: rgba(10, 26, 60, .44);
+  -webkit-backdrop-filter: saturate(130%) blur(10px);
+  backdrop-filter: saturate(130%) blur(10px);
+}
+
+.auth-dialog,
+.jobs-modal,
+.offer-modal,
+.invite-modal,
+.application-panel {
+  border: 1px solid var(--glass-line);
+  border-radius: var(--r-xl);
+  background: var(--glass-3);
+  -webkit-backdrop-filter: var(--blur-lg);
+  backdrop-filter: var(--blur-lg);
+  box-shadow: var(--elev-4), var(--glass-sheen);
+}
+
+.modal-close,
+.jobs-modal-close,
+.application-panel-close {
+  border-radius: 50%;
+  background: var(--glass-tint);
+  color: var(--ink-700);
+  transition: background .18s var(--ease), color .18s var(--ease);
+}
+
+.modal-close:hover,
+.jobs-modal-close:hover,
+.application-panel-close:hover {
+  background: var(--blue-200);
+  color: var(--brand-strong);
+}
+
+.toast {
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: var(--r-md);
+  background: rgba(12, 24, 48, .86);
+  -webkit-backdrop-filter: var(--blur-md);
+  backdrop-filter: var(--blur-md);
+  color: #fff;
+  box-shadow: var(--elev-4);
+}
+
+/* ---------------------------------------------------------------------------
+   Content surfaces — soft elevation, no blur
+   ------------------------------------------------------------------------ */
+
+.editor-card,
+.creator-card,
+.job-list-item,
+.job-detail,
+.job-apply-card,
+.case-meta-card,
+.case-owner-card,
+.profile-service-card,
+.profile-work-card,
+.manage-row,
+.settings-card,
+.auth-page-card {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--glass-2);
+  box-shadow: var(--elev-1);
+}
+
+/* .hire-banner is deliberately NOT in that list: it is a full-bleed photo with
+   white type over a dark scrim, and giving it a translucent white surface makes
+   its heading vanish. It keeps its image; an inset wash is the only change, so
+   the scrim sits on the blue ramp without having to restate the image URL. */
+.hire-banner {
+  box-shadow: inset 0 0 0 2000px rgba(8, 24, 58, .20);
+}
+
+.creator-card,
+.job-list-item,
+.profile-work-card {
+  transition: transform .2s var(--ease), box-shadow .2s var(--ease), border-color .2s var(--ease);
+}
+
+.creator-card:hover,
+.job-list-item:hover,
+.profile-work-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--blue-300);
+  box-shadow: var(--elev-3);
+}
+
+.modal-note,
+.settings-hint,
+.case-comments-off,
+.auth-hint {
+  border: 1px solid var(--glass-line-soft);
+  border-radius: var(--r-sm);
+  background: var(--glass-sunk);
+  color: var(--ink-500);
+}
+
+.empty-state {
+  border: 1px dashed var(--mist-400);
+  border-radius: var(--r-md);
+  background: var(--glass-1);
+  color: var(--text-soft);
+}
+
+/* Feed covers. The artwork is the subject, so it gets softened corners and a
+   contact shadow that seats it on the ground — and nothing else. No tint, no
+   border, no blur over the image. */
+.image-button,
+.profile-work-thumb,
+.mini-preview {
+  border-radius: var(--r-sm);
+  background: var(--mist-200);
+  box-shadow: var(--elev-1);
+}
+
+.content-card {
+  background: transparent;
+}
+
+.card-hover {
+  border-radius: 0 0 var(--r-sm) var(--r-sm);
+  background: linear-gradient(to top, rgba(8, 24, 58, .84), rgba(8, 24, 58, .32) 58%, rgba(8, 24, 58, 0));
+}
+
+.icon-action {
+  border: 1px solid var(--glass-line);
+  border-radius: var(--r-xs);
+  background: var(--glass-3);
+  -webkit-backdrop-filter: var(--blur-sm);
+  backdrop-filter: var(--blur-sm);
+  color: var(--ink-700);
+  box-shadow: var(--elev-1);
+}
+
+.icon-action.active,
+.card-stats button.liked {
+  color: var(--brand);
+}
+
+.status,
+.card-private {
+  border-radius: var(--r-pill);
+  background: rgba(10, 26, 60, .60);
+  -webkit-backdrop-filter: var(--blur-sm);
+  backdrop-filter: var(--blur-sm);
+  color: #fff;
+}
+
+.status.published {
+  background: var(--state-success);
+}
+
+.skeleton {
+  background: var(--mist-200);
+}
+
+/* ---------------------------------------------------------------------------
+   Controls
+   ------------------------------------------------------------------------ */
+
+/* The explore toolbar is sticky and full-bleed, so it floats over the grid as
+   you scroll — a genuine glass surface. It was an opaque white bar, which cut a
+   hard band across the gradient even before anything scrolled under it. */
+.toolbar {
+  border-bottom: 1px solid var(--glass-line-soft);
+  background: var(--glass-2);
+  -webkit-backdrop-filter: var(--blur-md);
+  backdrop-filter: var(--blur-md);
+}
+
+/* The search field and filter trigger are capsule controls by intent (see the
+   note in header-menus.css) — that is what --r-pill is for, so they keep it. */
+.search-box,
+.filter-trigger,
+.sort-tabs {
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  background: var(--glass-3);
+  -webkit-backdrop-filter: var(--blur-sm);
+  backdrop-filter: var(--blur-sm);
+  transition: border-color .18s var(--ease), box-shadow .18s var(--ease);
+}
+
+.search-box:focus-within {
+  border-color: var(--blue-300);
+  box-shadow: var(--ring);
+}
+
+.search-box svg {
+  color: var(--text-soft);
+}
+
+.filter-trigger {
+  color: var(--ink-700);
+}
+
+.filter-trigger:hover {
+  border-color: var(--blue-300);
+  background: var(--glass-3);
+}
+
+.filter {
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--ink-700);
+  transition: background .18s var(--ease), color .18s var(--ease);
+}
+
+.filter:hover {
+  background: var(--glass-tint);
+}
+
+/* An active filter is a soft blue chip, not a saturated slab: "overly bright
+   colors" is on the negative list, and solid blue on a light ground pulls the
+   eye off the work. */
+.filter.active {
+  border-color: var(--blue-200);
+  background: var(--blue-100);
+  color: var(--brand-strong);
+}
+
+.sort-tabs {
+  overflow: hidden;
+}
+
+.sort-tabs button {
+  border-right: 1px solid var(--glass-line-soft);
+  background: transparent;
+  color: var(--ink-700);
+}
+
+.sort-tabs button.active {
+  background: var(--blue-100);
+  color: var(--brand-strong);
+}
+
+/* Primary actions keep the brand blue, lit from above and seated on a soft
+   blue glow rather than a grey drop shadow. */
+.primary-link,
+.hero-button,
+.modal-submit,
+.apply,
+.invite-submit,
+.auth-submit,
+.creator-follow,
+.editor-publish-btn {
+  border: 0;
+  border-radius: var(--r-sm);
+  background: linear-gradient(180deg, #2f7bff, var(--blue-600));
+  color: #fff;
+  box-shadow: 0 1px 2px rgba(11, 69, 173, .20), 0 4px 12px rgba(23, 105, 255, .22);
+  transition: transform .18s var(--ease), box-shadow .18s var(--ease), filter .18s var(--ease);
+}
+
+.primary-link:hover,
+.hero-button:hover,
+.modal-submit:hover,
+.apply:hover,
+.invite-submit:hover,
+.auth-submit:hover,
+.creator-follow:hover,
+.editor-publish-btn:hover {
+  transform: translateY(-1px);
+  filter: saturate(108%);
+  box-shadow: 0 2px 4px rgba(11, 69, 173, .22), 0 8px 20px rgba(23, 105, 255, .28);
+}
+
+.secondary-button,
+.ghost-button,
+.card-actions button,
+.form-actions button,
+.manage-row button,
+.creator-message {
+  border: 1px solid var(--glass-line-soft) !important;
+  border-radius: var(--r-sm);
+  background: var(--glass-2) !important;
+  color: var(--ink-700) !important;
+  box-shadow: var(--elev-1);
+  transition: border-color .18s var(--ease), background .18s var(--ease);
+}
+
+.secondary-button:hover,
+.ghost-button:hover,
+.card-actions button:hover,
+.form-actions button:hover,
+.manage-row button:hover,
+.creator-message:hover {
+  border-color: var(--blue-300) !important;
+  background: var(--glass-3) !important;
+}
+
+.danger-button,
+.manage-row .danger-icon {
+  color: var(--state-danger) !important;
+}
+
+/* Text fields. Each feature stylesheet scopes its own input rule, so these
+   match those scopes — a global `input` rule would double-border every field
+   that already sits inside a styled wrapper. */
+.jobs-modal input,
+.jobs-modal textarea,
+.jobs-modal select,
+.offer-modal textarea,
+.block-field-group input,
+.block-field-group textarea,
+.sidebar-inline-form input,
+.settings-card input,
+.settings-card textarea {
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--glass-3);
+  color: var(--text);
+}
+
+.jobs-modal input:focus,
+.jobs-modal textarea:focus,
+.jobs-modal select:focus,
+.offer-modal textarea:focus,
+.block-field-group input:focus,
+.block-field-group textarea:focus,
+.sidebar-inline-form input:focus,
+.settings-card input:focus,
+.settings-card textarea:focus {
+  border-color: var(--blue-300);
+  box-shadow: var(--ring);
+}
+
+/* ---------------------------------------------------------------------------
+   Page grounds
+   Routes that painted their own opaque white or grey over <body> hand it back,
+   so the gradient is continuous. Separator bands become a translucent tint
+   rather than a grey fill.
+   ------------------------------------------------------------------------ */
+
+.hero,
+.profile-page,
+.people-section,
+.explore-section,
+.settings-page,
+.jobs-page {
+  background: transparent;
+}
+
+.manage-section,
+.case-light-section {
+  background: var(--glass-tint);
+}
+
+.editor-section {
+  border-top: 1px solid var(--glass-line-soft);
+}
+
+.hero .kicker {
+  color: var(--text-soft);
+}
+
+.hero-copy > p:not(.kicker) {
+  color: var(--ink-700);
+}
+
+/* The project page is the one dark room in the app — a case study reads better
+   with the work lit against a dark ground. It stays dark, but moves off
+   near-black onto the bottom of the blue ramp so it belongs to this palette. */
+.case-page {
+  background: linear-gradient(180deg, var(--blue-900) 0%, #060f26 60%, var(--blue-900) 100%);
+}
+
+.case-body {
+  background: rgba(8, 24, 58, .55);
+}
+
+.case-hero {
+  background: #050d1f;
+}
+
+.case-footer-block {
+  background: rgba(5, 13, 31, .70);
+}
+
+.tools-app,
+.case-field-tags span {
+  border-radius: var(--r-xs);
+  background: rgba(23, 105, 255, .12);
+}
+
+.case-private {
+  background: rgba(23, 105, 255, .12);
+  color: var(--blue-200);
+}
+
+.case-slides img,
+.case-strip-card img,
+.block-render-image img,
+.block-render-grid img {
+  background: rgba(23, 105, 255, .13);
+}
+
+/* Bars that span the page. Each was an opaque white strip, which cuts a hard
+   band across the gradient; each also floats over scrolling content, so each
+   is a real glass surface rather than just a repaint. */
+.jobs-tabs,
+.editor-topbar {
+  border-bottom: 1px solid var(--glass-line-soft);
+  background: var(--glass-2);
+  -webkit-backdrop-filter: var(--blur-md);
+  backdrop-filter: var(--blur-md);
+}
+
+/* Selected tab. Was near-black; kept dark so the selection still reads at a
+   glance, but moved onto the blue ramp. */
+.jobs-tabs-scroll button.active {
+  background: var(--blue-800);
+}
+
+.preview-overlay {
+  background: var(--glass-3);
+  -webkit-backdrop-filter: var(--blur-lg);
+  backdrop-filter: var(--blur-lg);
+}
+
+/* Large content panels. */
+.jobs-workspace,
+.jobs-list,
+.job-facts,
+.applicant-profile,
+.invite-foot,
+.choice-card,
+.hire-flow-form,
+.block-editor-empty,
+.editor-block {
+  border-color: var(--border);
+  background: var(--glass-2);
+}
+
+/* Small controls sitting on those panels — a pure-white chip on a translucent
+   surface reads as a hole. Active variants carry two classes and keep winning. */
+.save-job,
+.invite-chip,
+.settings-chip,
+.editor-draft-btn,
+.editor-settings-trigger,
+.location-decline {
+  border-color: var(--glass-line-soft);
+  background: var(--glass-2);
+}
+
+/* Sticky over the work, so this one earns its blur. */
+.case-rail {
+  border-bottom: 1px solid var(--glass-line-soft);
+  background: var(--glass-2);
+  -webkit-backdrop-filter: var(--blur-md);
+  backdrop-filter: var(--blur-md);
+}
+
+.rail-card,
+.sidebar-card {
+  border: 1px solid var(--glass-line);
+  border-radius: var(--r-md);
+  background: var(--glass-3);
+  -webkit-backdrop-filter: var(--blur-md);
+  backdrop-filter: var(--blur-md);
+  box-shadow: var(--elev-3), var(--glass-sheen);
+}
+
+.sidebar-pill-btn {
+  border: 1px solid var(--glass-line-soft);
+  border-radius: var(--r-sm);
+  background: var(--glass-2);
+  color: var(--ink-700);
+}
+
+.sidebar-pill-btn:hover {
+  border-color: var(--blue-300);
+  background: var(--glass-3);
+  color: var(--brand);
+}
+
+/* ---------------------------------------------------------------------------
+   Narrow viewports
+   ------------------------------------------------------------------------ */
+
+@media (max-width: 720px) {
+  :root {
+    --blur-md: saturate(170%) blur(12px);
+    --blur-lg: saturate(180%) blur(18px);
+  }
+
+  body {
+    /* A fixed attachment repaints the gradient on every scroll frame on
+       mobile; scrolling it with the page is cheaper and steadier. */
+    background-attachment: scroll;
+    background-size: 100% 100vh;
+  }
+
+  .auth-dialog,
+  .jobs-modal,
+  .offer-modal,
+  .invite-modal {
+    width: 100%;
+    border-radius: var(--r-xl) var(--r-xl) 0 0;
+  }
+
+  .modal-backdrop,
+  .jobs-modal-backdrop {
+    place-items: end stretch;
+    padding: 0;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Guards
+   ------------------------------------------------------------------------ */
+
+/* No backdrop-filter (older Firefox, some embedded webviews): fall back to a
+   near-opaque surface, or the "glass" is just washed-out text over a gradient. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root {
+    --glass-1: rgba(255, 255, 255, .92);
+    --glass-2: rgba(255, 255, 255, .95);
+    --glass-3: rgba(255, 255, 255, .98);
+    --glass-tint: rgba(234, 242, 253, .95);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --glass-1: var(--mist-50);
+    --glass-2: var(--mist-0);
+    --glass-3: var(--mist-0);
+    --glass-tint: var(--mist-100);
+    --glass-sunk: var(--mist-100);
+    --blur-sm: none;
+    --blur-md: none;
+    --blur-lg: none;
+  }
+
+  body {
+    background: var(--mist-50);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .creator-card,
+  .job-list-item,
+  .profile-work-card,
+  .primary-link,
+  .hero-button,
+  .modal-submit,
+  .creator-follow {
+    transition: none;
+  }
+
+  .creator-card:hover,
+  .job-list-item:hover,
+  .profile-work-card:hover,
+  .primary-link:hover,
+  .hero-button:hover,
+  .modal-submit:hover,
+  .creator-follow:hover {
+    transform: none;
+  }
+}
+
+@media print {
+  body {
+    background: #fff;
+  }
+
+  .glass-panel,
+  .glass-card {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: #fff;
+    box-shadow: none;
+  }
+}

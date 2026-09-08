@@ -17,6 +17,7 @@
 
 | Файл | Юуг харуулах вэ |
 |---|---|
+| [design-system.md](design-system.md) | **Визуал чиглэл** — glassmorphism токен, гадаргуу, хязгаарлалт. Шинэ UI бичихийн өмнө заавал уншина |
 | [ui-strings.md](ui-strings.md) | Системд ашиглагдаж буй бүх монгол товч, нэршил, мессеж — хийгддэг үйлдлийн тайлбартай |
 | [diagrams/01-system-architecture.md](diagrams/01-system-architecture.md) | Системийн ерөнхий бүтэц: давхаргууд, өгөгдлийн урсгал |
 | [diagrams/02-deployment.md](diagrams/02-deployment.md) | Байршуулалт, дэд бүтэц, орчны хувьсагчид |
